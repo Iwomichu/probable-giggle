@@ -47,7 +47,8 @@ class Config():
 
 @dataclass()
 class Assets:
-    ship_1 = pygame.image.load(os.path.join("assets", "ship_green.png"))
+    pass
+    #ship_1 = pygame.image.load(os.path.join("assets", "ship_green.png"))
 
 
 @dataclass()
