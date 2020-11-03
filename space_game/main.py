@@ -1,49 +1,31 @@
 import pygame
 import logging
 from dataclasses import dataclass
-from collections import namedtuple
-from enum import Enum, auto
-from typing import Dict, Tuple, List, Set
+
+from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
+from space_game.events.update_events.UpdateStatefulsEvent import UpdateStatefulsEvent
+from space_game.managers.CollisionManager import CollisionManager
+from space_game.Config import Config
+from space_game.DictionaryKeyResolver import DictionaryKeyResolver
+from space_game.managers.DrawableManager import DrawableManager
+from space_game.KeyProtocol import KeyProtocol
+from space_game.managers.MovableManager import MovableManager
+from space_game.Entity import Entity
+from space_game.Player import Player
+from space_game.events.update_events.CheckCollisionsEvent import CheckCollisionsEvent
+from space_game.events.DamageDealtEvent import DamageDealtEvent
+from space_game.managers.EventManager import EventManager
+from space_game.events.creation_events.NewCollisableAddedEvent import NewCollisableAddedEvent
+from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
+from space_game.events.creation_events.NewMovableAddedEvent import NewMovableAddedEvent
+from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
+from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
+from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawablesEvent
+from space_game.events.update_events.UpdateMovablesEvent import UpdateMovablesEvent
+from space_game.managers.StatefulsManager import StatefulsManager
 
 logger = logging.getLogger()
-pygame.init()
-
-KeyId = int
-Coordinate = float
-Constraint = namedtuple('Constraint', ['min', 'max'])
-Acceleration = float
-HitPoint = int
-
-
-class GameController:
-    pass
-
-
-@dataclass()
-class Config:
-    scale = 1
-    width = 400 * scale
-    height = 300 * scale
-    player_size = 25 * scale
-    player_1_width_constraint = Constraint(0, width)
-    player_1_height_constraint = Constraint(25 * scale, height / 2)
-    player_2_width_constraint = Constraint(0, width)
-    player_2_height_constraint = Constraint(height / 2, height - 25 * scale)
-    player_1_color = (255, 0, 0)
-    player_2_color = (0, 0, 255)
-    player_1_bullet_color = (255, 127, 0)
-    player_2_bullet_color = (127, 0, 255)
-    bullet_width = 2 * scale
-    bullet_height = 5 * scale
-    shoot_cooldown = 10
-    ammo_maximum = 10
-    ammo_countdown = 40
-    max_velocity = 8.
-    bullet_velocity = 10.
-    window = pygame.display.set_mode((width, height))
-    fps = 60
-    font = pygame.font.SysFont("arial", 10 * scale)
-    player_acceleration = .25
 
 
 @dataclass()
@@ -52,316 +34,7 @@ class Assets:
     # ship_1 = pygame.image.load(os.path.join("assets", "ship_green.png"))
 
 
-@dataclass()
-class Entity:
-    x: Coordinate
-    y: Coordinate
-    sprite: pygame.Surface
-    x_constraint: Constraint
-    y_constraint: Constraint
-    vertical_velocity: Acceleration
-    horizontal_velocity: Acceleration
-    width: int
-    height: int
-    color: Tuple[int, int, int]
-    max_velocity: Acceleration
-    acceleration: Acceleration = 0.
-
-    def draw(self, window) -> None:
-        pygame.draw.rect(window, self.color, (self.x, self.y, self.width, self.height))
-
-    def accelerate_horizontally(self, amount: Acceleration) -> None:
-        self.horizontal_velocity += amount
-
-    def accelerate_vertically(self, amount: Acceleration) -> None:
-        self.vertical_velocity += amount
-
-    def move_horizontally(self) -> None:
-        new_x = self.x + self.horizontal_velocity
-        if (new_x > self.x_constraint.min) and (new_x + self.width < self.x_constraint.max):
-            self.x = new_x
-        else:
-            self.horizontal_velocity = 0.
-
-    def move_vertically(self) -> None:
-        new_y = self.y + self.vertical_velocity
-        if (new_y > self.y_constraint.min) and (new_y + self.height < self.y_constraint.max):
-            self.y = new_y
-        else:
-            self.vertical_velocity = 0.
-
-    def get_shape(self) -> Tuple[int, int]:
-        return self.width, self.height
-
-    def is_at_constraints(self):
-        new_x = self.x + self.horizontal_velocity
-        new_y = self.y + self.vertical_velocity
-        vertical_constraint = (new_y > self.y_constraint.min) and (new_y + self.height < self.y_constraint.max)
-        horizontal_constraint = (new_x > self.x_constraint.min) and (new_x + self.width < self.x_constraint.max)
-        return (not vertical_constraint) or (not horizontal_constraint)
-
-    def accelerate_left(self) -> None:
-        if abs(self.horizontal_velocity - self.acceleration) < self.max_velocity:
-            self.horizontal_velocity -= self.acceleration
-
-    def accelerate_right(self) -> None:
-        if abs(self.horizontal_velocity + self.acceleration) < self.max_velocity:
-            self.horizontal_velocity += self.acceleration
-
-    def accelerate_up(self) -> None:
-        if abs(self.vertical_velocity - self.acceleration) < self.max_velocity:
-            self.vertical_velocity -= self.acceleration
-
-    def accelerate_down(self) -> None:
-        if abs(self.vertical_velocity + self.acceleration) < self.max_velocity:
-            self.vertical_velocity += self.acceleration
-
-
-class KeyProtocol(Enum):
-    LEFT = auto()
-    RIGHT = auto()
-    UP = auto()
-    DOWN = auto()
-    SHOOT = auto()
-
-
-class KeyResolverInterface:
-    def resolve(self, event: KeyId) -> KeyProtocol:
-        pass
-
-
-class DictionaryKeyResolver(KeyResolverInterface):
-    def __init__(self, dictionary: Dict[KeyId, KeyProtocol]) -> None:
-        self.dictionary = dictionary
-
-    def resolve(self, event: KeyId) -> KeyProtocol:
-        return self.dictionary.get(event)
-
-
-class Player:
-    def __init__(
-            self,
-            event_resolver: KeyResolverInterface,
-            entity: Entity, hitpoints: HitPoint,
-            game_controller: GameController,
-            side: int,
-            max_ammo: int
-    ) -> None:
-        self.event_resolver = event_resolver
-        self.entity = entity
-        self.hitpoints = hitpoints
-        self.game_controller: GameController = game_controller
-        self.side = side
-        self.max_ammo = max_ammo
-        self.ammo_left = self.max_ammo
-        self.shoot_countdown = 0
-        self.ammo_countdown = -1
-
-    def draw(self, window) -> None:
-        self.entity.draw(window)
-
-    def update_position(self) -> None:
-        self.entity.move_vertically()
-        self.entity.move_horizontally()
-
-    def shoot(self) -> None:
-        if self.shoot_countdown <= 0 and self.ammo_left > 0:
-            self.game_controller.add_projectile(
-                Bullet(
-                    Entity(
-                        self.entity.x + self.entity.width // 2,
-                        self.entity.y + (self.entity.height + 5 * self.game_controller.config.scale if self.side == 1 else -5 * self.game_controller.config.scale),
-                        None,
-                        Constraint(0, self.game_controller.config.width),
-                        Constraint(0, self.game_controller.config.height),
-                        self.game_controller.config.bullet_velocity * (1. if self.side == 1 else -1.),
-                        0,
-                        self.game_controller.config.bullet_width,
-                        self.game_controller.config.bullet_height,
-                        (
-                            self.game_controller.config.player_1_bullet_color
-                            if self.side == 1
-                            else self.game_controller.config.player_2_bullet_color
-                        ),
-                        0.
-                    ), 1
-                )
-            )
-            self.shoot_countdown = self.game_controller.config.shoot_cooldown
-            self.ammo_left -= 1
-        print("PEW PEW!")
-
-    def resolve(self, event: KeyId) -> None:
-        resolved = self.event_resolver.resolve(event)
-        print(resolved)
-        if resolved == KeyProtocol.LEFT:
-            self.entity.accelerate_left()
-        elif resolved == KeyProtocol.RIGHT:
-            self.entity.accelerate_right()
-        elif resolved == KeyProtocol.UP:
-            self.entity.accelerate_up()
-        elif resolved == KeyProtocol.DOWN:
-            self.entity.accelerate_down()
-        elif resolved == KeyProtocol.SHOOT:
-            self.shoot()
-
-    def update_state(self):
-        if self.shoot_countdown > 0:
-            self.shoot_countdown -= 1
-        if self.ammo_left < self.max_ammo:
-            if self.ammo_countdown == -1:
-                self.ammo_countdown = self.game_controller.config.ammo_countdown
-            elif self.ammo_countdown == 0:
-                self.ammo_countdown = -1
-                self.ammo_left += 1
-            else:
-                self.ammo_countdown -= 1
-
-
-class Projectile:
-    def __init__(self):
-        pass
-
-    def get_damage(self) -> HitPoint:
-        pass
-
-    def get_shape(self) -> Tuple[int, int]:
-        pass
-
-    def get_coordinates(self) -> Tuple[Coordinate, Coordinate]:
-        pass
-
-    def destroy(self) -> None:
-        pass
-
-    def update_position(self) -> None:
-        pass
-
-    def draw(self, window) -> None:
-        pass
-
-
-class Bullet(Projectile):
-    def __init__(self, entity: Entity, damage: HitPoint):
-        super().__init__()
-        self.entity = entity
-        self.damage = damage
-
-    def get_damage(self) -> HitPoint:
-        return self.damage
-
-    def get_shape(self) -> Tuple[int, int]:
-        return self.entity.width, self.entity.height
-
-    def get_coordinates(self) -> Tuple[Coordinate, Coordinate]:
-        return self.entity.x, self.entity.y
-
-    def destroy(self) -> None:
-        self.entity.vertical_acceleration = 0.
-        self.entity.horizontal_acceleration = 0.
-
-    def update_position(self) -> None:
-        self.entity.move_horizontally()
-        self.entity.move_vertically()
-
-    def draw(self, window) -> None:
-        self.entity.draw(window)
-
-
-def check_collision(player: Player, projectile: Projectile) -> bool:
-    projectile_x, projectile_y = projectile.get_coordinates()
-    projectile_width, projectile_height = projectile.get_shape()
-    horizontal_collision = (player.entity.x < (projectile_x + projectile_width)) and (
-                (player.entity.x + player.entity.width) > projectile_x)
-    vertical_collision = (player.entity.y < (projectile_y + projectile_height)) and (
-                (player.entity.y + player.entity.height) > projectile_y)
-    if horizontal_collision and vertical_collision:
-        player.hitpoints -= projectile.get_damage()
-        projectile.destroy()
-        return True
-    return False
-
-
-class GameController:
-    def __init__(self, config: Config):
-        self.players: List[Player] = []
-        self.projectiles: Set[Projectile] = set()
-        self.config = config
-
-    def add_player(self, player: Player) -> None:
-        self.players.append(player)
-
-    def add_projectile(self, projectile: Projectile) -> None:
-        self.projectiles.add(projectile)
-
-    def check_collisions(self) -> None:
-        persistent_projectiles = set([projectile for player in self.players for projectile in self.projectiles if
-                                      check_collision(player, projectile)])
-        self.projectiles = self.projectiles.difference(persistent_projectiles)
-
-    def check_players_hitpoints(self) -> Tuple[bool, bool]:
-        return self.players[0].hitpoints < 1, self.players[1].hitpoints < 1
-
-    def check_movement(self) -> None:
-        for player in self.players:
-            player.update_position()
-        persistent_projectiles = set()
-        for projectile in self.projectiles:
-            projectile.update_position()
-            if projectile.entity.is_at_constraints():
-                print("Projectile at constraints!")
-                projectile.destroy()
-                persistent_projectiles.add(projectile)
-        self.projectiles = self.projectiles.difference(persistent_projectiles)
-
-    def redraw_window(self):
-        surface = pygame.Surface((self.config.width, self.config.height))
-        surface.fill(([0, 0, 0]))
-        self.config.window.blit(surface, (0, 0))
-        player_1, player_2 = self.players[0], self.players[1]
-        p1_hp = self.config.font.render(f"HP: {player_1.hitpoints}", 1, (255, 255, 255))
-        p2_hp = self.config.font.render(f"HP: {player_2.hitpoints}", 1, (255, 255, 255))
-        self.config.window.blit(p1_hp, (5 * self.config.scale, 10 * self.config.scale))
-        self.config.window.blit(p2_hp, (5 * self.config.scale, self.config.height - 25 * self.config.scale))
-        p1_ammo = self.config.font.render(f"Ammo: {player_1.ammo_left}", 1, (255, 255, 255))
-        p2_ammo = self.config.font.render(f"Ammo: {player_2.ammo_left}", 1, (255, 255, 255))
-        self.config.window.blit(p1_ammo, (50 * self.config.scale, 10))
-        self.config.window.blit(p2_ammo, (50 * self.config.scale, self.config.height - 25))
-        p1_cooldown = self.config.font.render(f"CD: {'X' if player_1.shoot_countdown != 0 else 'OK'}", 1,
-                                              (255, 255, 255))
-        p2_cooldown = self.config.font.render(f"CD: {'X' if player_2.shoot_countdown != 0 else 'OK'}", 1,
-                                              (255, 255, 255))
-        self.config.window.blit(p1_cooldown, (110 * self.config.scale, 10 * self.config.scale))
-        self.config.window.blit(p2_cooldown, (110 * self.config.scale, self.config.height - 25 * self.config.scale))
-        p1_vertical_velocity = self.config.font.render(f"vertical velocity: {player_1.entity.vertical_velocity}", 1,
-                                                       (255, 255, 255))
-        p2_vertical_velocity = self.config.font.render(f"vertical velocity: {player_2.entity.vertical_velocity}", 1,
-                                                       (255, 255, 255))
-        self.config.window.blit(p1_vertical_velocity, (150 * self.config.scale, 10 * self.config.scale))
-        self.config.window.blit(p2_vertical_velocity, (150 * self.config.scale, self.config.height - 25 * self.config.scale))
-        p1_horizontal_velocity = self.config.font.render(f"horizontal velocity: {player_1.entity.horizontal_velocity}",
-                                                         1, (255, 255, 255))
-        p2_horizontal_velocity = self.config.font.render(f"horizontal velocity: {player_2.entity.horizontal_velocity}",
-                                                         1, (255, 255, 255))
-        self.config.window.blit(p1_horizontal_velocity, (275 * self.config.scale, 10 * self.config.scale))
-        self.config.window.blit(p2_horizontal_velocity, (275 * self.config.scale, self.config.height - 25 * self.config.scale))
-        for player in self.players:
-            player.draw(self.config.window)
-        for projectile in self.projectiles:
-            projectile.draw(self.config.window)
-        pygame.display.update()
-
-    def check_state(self):
-        for player in self.players:
-            player.update_state()
-
-
-def main():
-    running = True
-    clock = pygame.time.Clock()
-    config = Config()
-    game_controller = GameController(config)
-
+def create_players(config: Config, event_manager: EventManager):
     player_1_events_dictionary = {
         pygame.K_a: KeyProtocol.LEFT,
         pygame.K_d: KeyProtocol.RIGHT,
@@ -387,9 +60,10 @@ def main():
         DictionaryKeyResolver(player_1_events_dictionary),
         player_1_entity,
         5,
-        game_controller,
+        config,
         1,
-        config.ammo_maximum
+        config.ammo_maximum,
+        event_manager
     )
 
     player_2_events_dictionary = {
@@ -417,42 +91,71 @@ def main():
         DictionaryKeyResolver(player_2_events_dictionary),
         player_2_entity,
         5,
-        game_controller,
+        config,
         2,
-        config.ammo_maximum
+        config.ammo_maximum,
+        event_manager
     )
+    return player_1, player_2
 
-    game_controller.add_player(player_1)
-    game_controller.add_player(player_2)
+
+class GameController:
+    def __init__(self, config: Config):
+        self.config = config
+        self.event_manager = EventManager()
+        self.drawable_manager = DrawableManager(config)
+        self.collision_manager = CollisionManager(event_manager=self.event_manager)
+        self.movable_manager = MovableManager()
+        self.stateful_manager = StatefulsManager()
+        player_1, player_2 = create_players(config, self.event_manager)
+
+        self.event_manager.add_event(NewObjectCreatedEvent(self.drawable_manager))
+        self.event_manager.add_event(NewObjectCreatedEvent(self.collision_manager))
+        self.event_manager.add_event(NewObjectCreatedEvent(self.movable_manager))
+        self.event_manager.add_event(NewObjectCreatedEvent(self.stateful_manager))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), UpdateDrawablesEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), NewDrawableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), CheckCollisionsEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), NewCollisableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), UpdateMovablesEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), NewMovableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), NewStatefulAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), UpdateStatefulsEvent))
+
+        self.event_manager.add_event(NewObjectCreatedEvent(player_1))
+        self.event_manager.add_event(NewObjectCreatedEvent(player_2))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(player_2)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), PlayerAcceleratedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), PlayerAcceleratedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), DamageDealtEvent))
+
+    def __refresh__(self):
+        self.event_manager.add_event(UpdateDrawablesEvent())
+        self.event_manager.add_event(UpdateMovablesEvent())
+        self.event_manager.add_event(UpdateStatefulsEvent())
+        self.event_manager.add_event(CheckCollisionsEvent())
+        self.event_manager.process_events()
+
+
+def main():
+    running = True
+    clock = pygame.time.Clock()
+    config = Config()
+    game_controller = GameController(config)
+
     message = ""
     print(pygame.K_RSHIFT)
     while running:
         clock.tick(config.fps)
+        game_controller.__refresh__()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-        pressed_keys = [i for i, val in enumerate(pygame.key.get_pressed()) if val]
-        for key in pressed_keys:
-            print(key)
-            player_1.resolve(key)
-            player_2.resolve(key)
-
-        game_controller.check_movement()
-        game_controller.check_collisions()
-        game_controller.redraw_window()
-        game_controller.check_state()
-        p1_dead, p2_dead = game_controller.check_players_hitpoints()
-        if p1_dead and p2_dead:
-            message = config.font.render(f"DRAW", 1, (255, 255, 255))
-            running = False
-        elif p1_dead:
-            message = config.font.render(f"P2 WON", 1, (255, 255, 255))
-            running = False
-        elif p2_dead:
-            message = config.font.render(f"P1 WON", 1, (255, 255, 255))
-            running = False
     config.window.blit(message, (config.width // 2 - 20, config.height // 2))
     pygame.display.update()
     pygame.time.wait(5000)
