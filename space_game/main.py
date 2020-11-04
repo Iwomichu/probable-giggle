@@ -2,6 +2,9 @@ import pygame
 import logging
 from dataclasses import dataclass
 
+from space_game.InformationDisplay import InformationDisplay
+from space_game.events.KeyPressedEvent import KeyPressedEvent
+from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.events.update_events.UpdateStatefulsEvent import UpdateStatefulsEvent
 from space_game.managers.CollisionManager import CollisionManager
@@ -108,6 +111,7 @@ class GameController:
         self.movable_manager = MovableManager()
         self.stateful_manager = StatefulsManager()
         player_1, player_2 = create_players(config, self.event_manager)
+        self.information_display = InformationDisplay(player_1, player_2, config)
 
         self.event_manager.add_event(NewObjectCreatedEvent(self.drawable_manager))
         self.event_manager.add_event(NewObjectCreatedEvent(self.collision_manager))
@@ -115,32 +119,44 @@ class GameController:
         self.event_manager.add_event(NewObjectCreatedEvent(self.stateful_manager))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), UpdateDrawablesEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), NewDrawableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), ObjectDeletedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), CheckCollisionsEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), NewCollisableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), ObjectDeletedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), UpdateMovablesEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), NewMovableAddedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), ObjectDeletedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), NewStatefulAddedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), UpdateStatefulsEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), ObjectDeletedEvent))
+
+        self.event_manager.add_event(NewObjectCreatedEvent(self.information_display))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(self.information_display)))
 
         self.event_manager.add_event(NewObjectCreatedEvent(player_1))
         self.event_manager.add_event(NewObjectCreatedEvent(player_2))
+        self.event_manager.add_event(NewCollisableAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewCollisableAddedEvent(id(player_2)))
         self.event_manager.add_event(NewDrawableAddedEvent(id(player_1)))
         self.event_manager.add_event(NewDrawableAddedEvent(id(player_2)))
         self.event_manager.add_event(NewMovableAddedEvent(id(player_1)))
         self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
         self.event_manager.add_event(NewStatefulAddedEvent(id(player_1)))
-        self.event_manager.add_event(NewStatefulAddedEvent(id(player_1)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(player_2)))
         self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), PlayerAcceleratedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), KeyPressedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), PlayerAcceleratedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), KeyPressedEvent))
 
     def __refresh__(self):
         self.event_manager.add_event(UpdateDrawablesEvent())
         self.event_manager.add_event(UpdateMovablesEvent())
         self.event_manager.add_event(UpdateStatefulsEvent())
         self.event_manager.add_event(CheckCollisionsEvent())
+
         self.event_manager.process_events()
 
 
@@ -154,6 +170,14 @@ def main():
     print(pygame.K_RSHIFT)
     while running:
         clock.tick(config.fps)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        for i, val in enumerate(pygame.key.get_pressed()):
+            if val:
+                print(f"Emmited {i} key press event")
+                game_controller.event_manager.add_event(KeyPressedEvent(i))
         game_controller.__refresh__()
 
     config.window.blit(message, (config.width // 2 - 20, config.height // 2))

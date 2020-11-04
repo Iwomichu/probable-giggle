@@ -20,6 +20,7 @@ class Entity:
     color: Tuple[int, int, int]
     max_velocity: Acceleration
     acceleration: Acceleration = 0.
+    respect_constraints: bool = True
 
     def draw(self, window) -> None:
         pygame.draw.rect(window, self.color, (self.x, self.y, self.width, self.height))
@@ -34,14 +35,14 @@ class Entity:
         new_x = self.x + self.horizontal_velocity
         if (new_x > self.x_constraint.min) and (new_x + self.width < self.x_constraint.max):
             self.x = new_x
-        else:
+        elif self.respect_constraints:
             self.horizontal_velocity = 0.
 
     def move_vertically(self) -> None:
         new_y = self.y + self.vertical_velocity
         if (new_y > self.y_constraint.min) and (new_y + self.height < self.y_constraint.max):
             self.y = new_y
-        else:
+        elif self.respect_constraints:
             self.vertical_velocity = 0.
 
     def get_shape(self) -> Tuple[int, int]:

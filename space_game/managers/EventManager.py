@@ -17,6 +17,7 @@ class EventManager(EventProcessor):
         self.event_processors[ObjectDeletedEvent][id(self)] = self
         self.event_processors[NewEventProcessorAddedEvent][id(self)] = self
         self.event_processors[NewObjectCreatedEvent][id(objects_manager)] = objects_manager
+        self.event_processors[ObjectDeletedEvent][id(objects_manager)] = objects_manager
         self.event_resolver = {
             ObjectDeletedEvent: self.process_object_deleted_event,
             NewEventProcessorAddedEvent: self.process_new_event_processor_added_event,

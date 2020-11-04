@@ -1,6 +1,8 @@
 import space_game.events.DamageDealtEvent
 import space_game.events.PlayerAcceleratedEvent
 from space_game.AccelerationDirection import AccelerationDirection
+from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
+from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.interfaces.Collisable import Collisable
 from space_game.Config import Config
 from space_game.interfaces.Damagable import Damagable
@@ -10,6 +12,7 @@ from space_game.interfaces.Stateful import Stateful
 from space_game.events.EventEmitter import EventEmitter
 from space_game.managers.EventManager import EventManager
 from space_game.events.EventProcessor import EventProcessor
+from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.events.creation_events.NewCollisableAddedEvent import NewCollisableAddedEvent
 from space_game.events.creation_events.NewMovableAddedEvent import NewMovableAddedEvent
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
@@ -37,6 +40,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         self.shoot_countdown = 0
         self.ammo_countdown = -1
         self.game_event_resolver = {
+            space_game.events.KeyPressedEvent.KeyPressedEvent: self.process_key_pressed_event,
             space_game.events.PlayerAcceleratedEvent.PlayerAcceleratedEvent: self.process_acceleration_event,
             space_game.events.DamageDealtEvent.DamageDealtEvent: self.process_damage_dealt_event,
             space_game.events.Event.Event: lambda e: None
@@ -59,6 +63,10 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
     def process_damage_dealt_event(self, event: DamageDealtEvent):
         if event.damaged_id == id(self):
             self.damage(event.amount)
+
+    def process_key_pressed_event(self, event: KeyPressedEvent):
+        print(event.key_id)
+        self.resolve(event.key_id)
 
     def damage(self, amount) -> None:
         self.hitpoints -= amount
@@ -89,7 +97,8 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                             if self.side == 1
                             else self.config.player_2_bullet_color
                         ),
-                        0.
+                        0.,
+                        respect_constraints=False
                     ), 1, self.event_manager
                 )
             self.emit_bullet_fired_events(bullet)
@@ -100,6 +109,8 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         self.event_manager.add_event(NewObjectCreatedEvent(bullet))
         self.event_manager.add_event(NewMovableAddedEvent(id(bullet)))
         self.event_manager.add_event(NewCollisableAddedEvent(id(bullet)))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(bullet)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(bullet)))
         self.shoot_countdown = self.config.shoot_cooldown
 
     def resolve(self, event: KeyId) -> None:

@@ -8,13 +8,14 @@ from space_game.events.Event import Event
 from space_game.events.EventProcessor import EventProcessor
 from space_game.events.creation_events.NewMovableAddedEvent import NewMovableAddedEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
+from space_game.interfaces.Stateful import Stateful
 from space_game.managers.ObjectsManager import objects_manager
 from space_game.events.update_events.UpdateMovablesEvent import UpdateMovablesEvent
 
 
 class StatefulsManager(EventProcessor):
     def __init__(self):
-        self.statefuls: Dict[ObjectId, Movable] = {}
+        self.statefuls: Dict[ObjectId, Stateful] = {}
         self.event_resolver = {
             NewStatefulAddedEvent: self.process_new_stateful_added_event,
             ObjectDeletedEvent: self.process_object_deleted_event,
@@ -34,7 +35,7 @@ class StatefulsManager(EventProcessor):
 
     def update_statefuls(self):
         for stateful in self.statefuls.values():
-            stateful.update_position()
+            stateful.update_state()
 
     def process_update_statefuls_event(self, event: Event):
         self.update_statefuls()

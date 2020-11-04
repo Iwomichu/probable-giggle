@@ -39,7 +39,6 @@ class DrawableManager(EventProcessor):
         pygame.display.update()
 
     def process_update_drawables_event(self, event: Event):
-        print("drawdraw")
         self.update_drawables()
 
     def redraw_window(self):

@@ -1,4 +1,5 @@
 from typing import Dict
+from itertools import combinations
 
 from space_game.interfaces.Collisable import Collisable
 from space_game.managers.ObjectsManager import objects_manager
@@ -37,21 +38,23 @@ class CollisionManager(EventEmitter, EventProcessor):
         self.check_collisions()
 
     def check_collisions(self):
-        for p1_id, participant_1 in self.collisables.items():
+        for (p1_id, participant_1), (p2_id, participant_2) in combinations(self.collisables.items(), 2):
             participant_1_x, participant_1_y = participant_1.get_coordinates()
             participant_1_width, participant_1_height = participant_1.get_shape()
-            for p2_id, participant_2 in self.collisables.items():
-                if p1_id == p2_id:
-                    continue
-                else:
-                    participant_2_x, participant_2_y = participant_2.get_coordinates()
-                    participant_2_width, participant_2_height = participant_2.get_shape()
-                    horizontal_collision = (participant_2_x < (participant_1_x + participant_1_width)) and (
-                            (participant_2_x + participant_2_width) > participant_1_x)
-                    vertical_collision = (participant_2_y < (participant_1_y + participant_1_height)) and (
-                            (participant_2_y + participant_2_height) > participant_1_y)
-                    if horizontal_collision and vertical_collision:
-                        self.emit_collision(p1_id, p2_id)
+            if p1_id == p2_id:
+                continue
+            else:
+                participant_2_x, participant_2_y = participant_2.get_coordinates()
+                participant_2_width, participant_2_height = participant_2.get_shape()
+                horizontal_collision = (participant_2_x < (participant_1_x + participant_1_width)) and (
+                        (participant_2_x + participant_2_width) > participant_1_x)
+                vertical_collision = (participant_2_y < (participant_1_y + participant_1_height)) and (
+                        (participant_2_y + participant_2_height) > participant_1_y)
+                if horizontal_collision and vertical_collision:
+                    self.emit_collision(p1_id, p2_id)
+                    participant_1.collide(p2_id)
+                    participant_2.collide(p1_id)
 
     def emit_collision(self, p1_id, p2_id):
-        self.event_manager.add_event(CollisionOccurredEvent(participant_1_id=p1_id, participant_2_id=p2_id))
+        # self.event_manager.add_event(CollisionOccurredEvent(participant_1_id=p1_id, participant_2_id=p2_id))
+        pass
