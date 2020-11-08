@@ -1,6 +1,11 @@
+from typing import Dict, Any
+
+import pygame
+
 import space_game.events.DamageDealtEvent
 import space_game.events.PlayerAcceleratedEvent
 from space_game.AccelerationDirection import AccelerationDirection
+from space_game.DictionaryKeyResolver import DictionaryKeyResolver
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.interfaces.Collisable import Collisable
@@ -28,7 +33,7 @@ from space_game.Bullet import Bullet
 
 
 class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawable, Stateful):
-    def __init__(self, controller_event_resolver: KeyResolverInterface, entity: Entity, hitpoints: HitPoint, config: Config, side: int, max_ammo: int, event_manager: EventManager) -> None:
+    def __init__(self, entity: Entity, hitpoints: HitPoint, config: Config, side: int, max_ammo: int, event_manager: EventManager, controller_event_resolver: DictionaryKeyResolver = None) -> None:
         super().__init__(event_manager)
         self.controller_event_resolver = controller_event_resolver
         self.entity = entity
@@ -65,8 +70,9 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
             self.damage(event.amount)
 
     def process_key_pressed_event(self, event: KeyPressedEvent):
-        print(event.key_id)
-        self.resolve(event.key_id)
+        if self.controller_event_resolver:
+            print(event.key_id)
+            self.resolve(event.key_id)
 
     def damage(self, amount) -> None:
         self.hitpoints -= amount
@@ -83,22 +89,22 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         if self.shoot_countdown <= 0 and self.ammo_left > 0:
             bullet = Bullet(
                     Entity(
-                        self.entity.x + self.entity.width // 2,
-                        self.entity.y + (self.entity.height + 5 * self.config.scale if self.side == 1 else -5 * self.config.scale),
-                        None,
-                        Constraint(0, self.config.width),
-                        Constraint(0, self.config.height),
-                        self.config.bullet_velocity * (1. if self.side == 1 else -1.),
-                        0,
-                        self.config.bullet_width,
-                        self.config.bullet_height,
-                        (
+                        x=self.entity.x + self.entity.width // 2,
+                        y=self.entity.y + (self.entity.height + 5 * self.config.scale if self.side == 1 else -5 * self.config.scale),
+                        x_constraint=Constraint(0, self.config.width),
+                        y_constraint=Constraint(0, self.config.height),
+                        vertical_velocity=self.config.bullet_velocity * (1. if self.side == 1 else -1.),
+                        horizontal_velocity=0,
+                        width=self.config.bullet_width,
+                        height=self.config.bullet_height,
+                        color=(
                             self.config.player_1_bullet_color
                             if self.side == 1
                             else self.config.player_2_bullet_color
                         ),
-                        0.,
-                        respect_constraints=False
+                        acceleration=0.,
+                        respect_constraints=False,
+                        max_velocity=self.config.max_velocity
                     ), 1, self.event_manager
                 )
             self.emit_bullet_fired_events(bullet)
@@ -148,3 +154,70 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
     def collide(self, target_id: ObjectId) -> None:
         pass
 
+
+def create_player(config: Config, entity: Entity, event_manager: EventManager, side: int, event_resolver: KeyResolverInterface = None) -> Player:
+    return Player(
+        entity=entity,
+        hitpoints=5,
+        config=config,
+        side=side,
+        max_ammo=config.ammo_maximum,
+        event_manager=event_manager,
+        controller_event_resolver=event_resolver,
+    )
+
+
+def create_player_1(config: Config, event_manager: EventManager, key_resolver: KeyResolverInterface = None) -> Player:
+    player_1_entity = Entity(
+        x=config.width / 2,
+        y=100,
+        x_constraint=config.player_1_width_constraint,
+        y_constraint=config.player_1_height_constraint,
+        vertical_velocity=1.,
+        horizontal_velocity=0.,
+        width=config.player_size,
+        height=config.player_size,
+        color=config.player_1_color,
+        max_velocity=config.max_velocity,
+        acceleration=config.player_acceleration
+    )
+    return create_player(config, player_1_entity, event_manager, 1, key_resolver)
+
+
+def create_player_2(config: Config, event_manager: EventManager, key_resolver: KeyResolverInterface = None) -> Player:
+    player_2_entity = Entity(
+        x=config.width / 2,
+        y=config.height - 100,
+        x_constraint=config.player_2_width_constraint,
+        y_constraint=config.player_2_height_constraint,
+        vertical_velocity=-1.,
+        horizontal_velocity=0.,
+        width=config.player_size,
+        height=config.player_size,
+        color=config.player_2_color,
+        max_velocity=config.max_velocity,
+        acceleration=config.player_acceleration
+    )
+    return create_player(config, player_2_entity, event_manager, 2, key_resolver)
+
+
+def create_human_player_1(config: Config, event_manager: EventManager) -> Player:
+    player_1_events_dictionary = {
+        pygame.K_a: KeyProtocol.LEFT,
+        pygame.K_d: KeyProtocol.RIGHT,
+        pygame.K_w: KeyProtocol.UP,
+        pygame.K_s: KeyProtocol.DOWN,
+        pygame.K_SPACE: KeyProtocol.SHOOT
+    }
+    return create_player_1(config, event_manager, DictionaryKeyResolver(player_1_events_dictionary))
+
+
+def create_human_player_2(config: Config, event_manager: EventManager) -> Player:
+    player_2_events_dictionary = {
+        pygame.K_LEFT: KeyProtocol.LEFT,
+        pygame.K_RIGHT: KeyProtocol.RIGHT,
+        pygame.K_UP: KeyProtocol.UP,
+        pygame.K_DOWN: KeyProtocol.DOWN,
+        pygame.K_RSHIFT: KeyProtocol.SHOOT
+    }
+    return create_player_2(config, event_manager, DictionaryKeyResolver(player_2_events_dictionary))

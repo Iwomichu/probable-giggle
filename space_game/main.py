@@ -1,3 +1,5 @@
+from typing import List
+
 import pygame
 import logging
 from dataclasses import dataclass
@@ -9,12 +11,9 @@ from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulA
 from space_game.events.update_events.UpdateStatefulsEvent import UpdateStatefulsEvent
 from space_game.managers.CollisionManager import CollisionManager
 from space_game.Config import Config
-from space_game.DictionaryKeyResolver import DictionaryKeyResolver
 from space_game.managers.DrawableManager import DrawableManager
-from space_game.KeyProtocol import KeyProtocol
 from space_game.managers.MovableManager import MovableManager
-from space_game.Entity import Entity
-from space_game.Player import Player
+from space_game.Player import Player, create_human_player_1, create_human_player_2
 from space_game.events.update_events.CheckCollisionsEvent import CheckCollisionsEvent
 from space_game.events.DamageDealtEvent import DamageDealtEvent
 from space_game.managers.EventManager import EventManager
@@ -37,81 +36,15 @@ class Assets:
     # ship_1 = pygame.image.load(os.path.join("assets", "ship_green.png"))
 
 
-def create_players(config: Config, event_manager: EventManager):
-    player_1_events_dictionary = {
-        pygame.K_a: KeyProtocol.LEFT,
-        pygame.K_d: KeyProtocol.RIGHT,
-        pygame.K_w: KeyProtocol.UP,
-        pygame.K_s: KeyProtocol.DOWN,
-        pygame.K_SPACE: KeyProtocol.SHOOT
-    }
-    player_1_entity = Entity(
-        config.width / 2,
-        100,
-        None,
-        config.player_1_width_constraint,
-        config.player_1_height_constraint,
-        1.,
-        0.,
-        config.player_size,
-        config.player_size,
-        config.player_1_color,
-        config.max_velocity,
-        config.player_acceleration
-    )
-    player_1 = Player(
-        DictionaryKeyResolver(player_1_events_dictionary),
-        player_1_entity,
-        5,
-        config,
-        1,
-        config.ammo_maximum,
-        event_manager
-    )
-
-    player_2_events_dictionary = {
-        pygame.K_LEFT: KeyProtocol.LEFT,
-        pygame.K_RIGHT: KeyProtocol.RIGHT,
-        pygame.K_UP: KeyProtocol.UP,
-        pygame.K_DOWN: KeyProtocol.DOWN,
-        pygame.K_RSHIFT: KeyProtocol.SHOOT
-    }
-    player_2_entity = Entity(
-        config.width / 2,
-        config.height - 100,
-        None,
-        config.player_2_width_constraint,
-        config.player_2_height_constraint,
-        -1.,
-        0.,
-        config.player_size,
-        config.player_size,
-        config.player_2_color,
-        config.max_velocity,
-        config.player_acceleration
-    )
-    player_2 = Player(
-        DictionaryKeyResolver(player_2_events_dictionary),
-        player_2_entity,
-        5,
-        config,
-        2,
-        config.ammo_maximum,
-        event_manager
-    )
-    return player_1, player_2
-
-
 class GameController:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, mode = 'human'):
         self.config = config
         self.event_manager = EventManager()
         self.drawable_manager = DrawableManager(config)
         self.collision_manager = CollisionManager(event_manager=self.event_manager)
         self.movable_manager = MovableManager()
         self.stateful_manager = StatefulsManager()
-        player_1, player_2 = create_players(config, self.event_manager)
-        self.information_display = InformationDisplay(player_1, player_2, config)
+        self.players: List[Player] = []
 
         self.event_manager.add_event(NewObjectCreatedEvent(self.drawable_manager))
         self.event_manager.add_event(NewObjectCreatedEvent(self.collision_manager))
@@ -130,27 +63,6 @@ class GameController:
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), UpdateStatefulsEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), ObjectDeletedEvent))
 
-        self.event_manager.add_event(NewObjectCreatedEvent(self.information_display))
-        self.event_manager.add_event(NewDrawableAddedEvent(id(self.information_display)))
-
-        self.event_manager.add_event(NewObjectCreatedEvent(player_1))
-        self.event_manager.add_event(NewObjectCreatedEvent(player_2))
-        self.event_manager.add_event(NewCollisableAddedEvent(id(player_1)))
-        self.event_manager.add_event(NewCollisableAddedEvent(id(player_2)))
-        self.event_manager.add_event(NewDrawableAddedEvent(id(player_1)))
-        self.event_manager.add_event(NewDrawableAddedEvent(id(player_2)))
-        self.event_manager.add_event(NewMovableAddedEvent(id(player_1)))
-        self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
-        self.event_manager.add_event(NewStatefulAddedEvent(id(player_1)))
-        self.event_manager.add_event(NewStatefulAddedEvent(id(player_2)))
-        self.event_manager.add_event(NewMovableAddedEvent(id(player_2)))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), PlayerAcceleratedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), DamageDealtEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_1), KeyPressedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), PlayerAcceleratedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), DamageDealtEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player_2), KeyPressedEvent))
-
     def __refresh__(self):
         self.event_manager.add_event(UpdateDrawablesEvent())
         self.event_manager.add_event(UpdateMovablesEvent())
@@ -159,15 +71,35 @@ class GameController:
 
         self.event_manager.process_events()
 
+    def __add_player__(self, player: Player) -> None:
+        self.event_manager.add_event(NewObjectCreatedEvent(player))
+        self.event_manager.add_event(NewCollisableAddedEvent(id(player)))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(player)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(player)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(player)))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), PlayerAcceleratedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), KeyPressedEvent))
+        self.players.append(player)
+        if len(self.players) >= 2:
+            self.__add_info__()
+
+    def __add_info__(self):
+        player_1, player_2 = self.players[:2]
+        self.information_display = InformationDisplay(player_1, player_2, self.config)
+        self.event_manager.add_event(NewObjectCreatedEvent(self.information_display))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(self.information_display)))
+
 
 def main():
     running = True
     clock = pygame.time.Clock()
     config = Config()
     game_controller = GameController(config)
-
-    message = ""
-    print(pygame.K_RSHIFT)
+    player_1 = create_human_player_1(config, game_controller.event_manager)
+    player_2 = create_human_player_2(config, game_controller.event_manager)
+    game_controller.__add_player__(player_1)
+    game_controller.__add_player__(player_2)
     while running:
         clock.tick(config.fps)
 
@@ -180,7 +112,6 @@ def main():
                 game_controller.event_manager.add_event(KeyPressedEvent(i))
         game_controller.__refresh__()
 
-    config.window.blit(message, (config.width // 2 - 20, config.height // 2))
     pygame.display.update()
     pygame.time.wait(5000)
 
