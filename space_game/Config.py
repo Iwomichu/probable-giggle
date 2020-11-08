@@ -32,3 +32,4 @@ class Config:
     fps = 60
     font = pygame.font.SysFont("arial", 10 * scale)
     player_acceleration = .25
+    ai_input_lag = 20 # amount of frames AI has to wait to act

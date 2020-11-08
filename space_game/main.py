@@ -4,6 +4,7 @@ import pygame
 import logging
 from dataclasses import dataclass
 
+from space_game.AIController import AIController
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.InformationDisplay import InformationDisplay
 from space_game.KeyboardController import KeyboardController
@@ -11,12 +12,13 @@ from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
 from space_game.events.PlayerShootsEvent import PlayerShootsEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
+from space_game.events.update_events.UpdateAIControllersEvent import UpdateAIControllersEvent
 from space_game.events.update_events.UpdateStatefulsEvent import UpdateStatefulsEvent
 from space_game.managers.CollisionManager import CollisionManager
 from space_game.Config import Config
 from space_game.managers.DrawableManager import DrawableManager
 from space_game.managers.MovableManager import MovableManager
-from space_game.Player import Player, create_human_player_1, create_human_player_2
+from space_game.Player import Player, create_human_player_1, create_player_2
 from space_game.events.update_events.CheckCollisionsEvent import CheckCollisionsEvent
 from space_game.events.DamageDealtEvent import DamageDealtEvent
 from space_game.managers.EventManager import EventManager
@@ -30,6 +32,7 @@ from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawables
 from space_game.events.update_events.UpdateMovablesEvent import UpdateMovablesEvent
 from space_game.managers.StatefulsManager import StatefulsManager
 from space_game.managers.KeyboardEventsProcessor import KeyboardEventsProcessor
+from space_game.RandomAI import RandomAI
 
 logger = logging.getLogger()
 
@@ -75,6 +78,7 @@ class GameController:
         self.event_manager.add_event(UpdateMovablesEvent())
         self.event_manager.add_event(UpdateStatefulsEvent())
         self.event_manager.add_event(CheckCollisionsEvent())
+        self.event_manager.add_event(UpdateAIControllersEvent())
 
         self.event_manager.process_events()
 
@@ -118,6 +122,10 @@ class GameController:
         self.event_manager.add_event(NewObjectCreatedEvent(self.information_display))
         self.event_manager.add_event(NewDrawableAddedEvent(id(self.information_display)))
 
+    def __add_ai_controller__(self, ai_controller: AIController):
+        self.event_manager.add_event(NewObjectCreatedEvent(ai_controller))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(ai_controller), UpdateAIControllersEvent))
+
 
 def main():
     running = True
@@ -125,9 +133,12 @@ def main():
     config = Config()
     game_controller = GameController(config)
     player_1, p1_controller = create_human_player_1(config, game_controller.event_manager)
-    player_2, p2_controller = create_human_player_2(config, game_controller.event_manager)
+    # player_2, p2_controller = create_human_player_2(config, game_controller.event_manager)
+    player_2 = create_player_2(config, game_controller.event_manager)
+    ai_2 = RandomAI(game_controller.event_manager, config, player_2)
     game_controller.__add_player__(player_1, p1_controller)
-    game_controller.__add_player__(player_2, p2_controller)
+    game_controller.__add_player__(player_2)
+    game_controller.__add_ai_controller__(ai_2)
     while running:
         clock.tick(config.fps)
 

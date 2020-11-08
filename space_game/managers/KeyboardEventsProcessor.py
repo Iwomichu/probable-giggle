@@ -21,7 +21,7 @@ class KeyboardEventsProcessor(EventProcessor, EventEmitter):
         self.key_to_event_mappings[key].append(event)
 
     def process_key_pressed_event(self, event: KeyPressedEvent):
-        for map_event in self.key_to_event_mappings.get(event.key_id):
+        for map_event in self.key_to_event_mappings[event.key_id]:
             self.event_manager.add_event(map_event)
 
     def process_event(self, event: Event):
