@@ -4,9 +4,12 @@ import pygame
 import logging
 from dataclasses import dataclass
 
+from space_game.AccelerationDirection import AccelerationDirection
 from space_game.InformationDisplay import InformationDisplay
+from space_game.KeyboardController import KeyboardController
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
+from space_game.events.PlayerShootsEvent import PlayerShootsEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.events.update_events.UpdateStatefulsEvent import UpdateStatefulsEvent
 from space_game.managers.CollisionManager import CollisionManager
@@ -26,6 +29,7 @@ from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawablesEvent
 from space_game.events.update_events.UpdateMovablesEvent import UpdateMovablesEvent
 from space_game.managers.StatefulsManager import StatefulsManager
+from space_game.managers.KeyboardEventsProcessor import KeyboardEventsProcessor
 
 logger = logging.getLogger()
 
@@ -44,12 +48,14 @@ class GameController:
         self.collision_manager = CollisionManager(event_manager=self.event_manager)
         self.movable_manager = MovableManager()
         self.stateful_manager = StatefulsManager()
+        self.keyboard_processor = KeyboardEventsProcessor(event_manager=self.event_manager)
         self.players: List[Player] = []
 
         self.event_manager.add_event(NewObjectCreatedEvent(self.drawable_manager))
         self.event_manager.add_event(NewObjectCreatedEvent(self.collision_manager))
         self.event_manager.add_event(NewObjectCreatedEvent(self.movable_manager))
         self.event_manager.add_event(NewObjectCreatedEvent(self.stateful_manager))
+        self.event_manager.add_event(NewObjectCreatedEvent(self.keyboard_processor))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), UpdateDrawablesEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), NewDrawableAddedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), ObjectDeletedEvent))
@@ -62,6 +68,7 @@ class GameController:
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), NewStatefulAddedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), UpdateStatefulsEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), ObjectDeletedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.keyboard_processor), KeyPressedEvent))
 
     def __refresh__(self):
         self.event_manager.add_event(UpdateDrawablesEvent())
@@ -71,7 +78,7 @@ class GameController:
 
         self.event_manager.process_events()
 
-    def __add_player__(self, player: Player) -> None:
+    def __add_player__(self, player: Player, keyboard_controller: KeyboardController = None) -> None:
         self.event_manager.add_event(NewObjectCreatedEvent(player))
         self.event_manager.add_event(NewCollisableAddedEvent(id(player)))
         self.event_manager.add_event(NewDrawableAddedEvent(id(player)))
@@ -79,8 +86,29 @@ class GameController:
         self.event_manager.add_event(NewStatefulAddedEvent(id(player)))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), PlayerAcceleratedEvent))
         self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), DamageDealtEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), KeyPressedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), PlayerShootsEvent))
         self.players.append(player)
+        if keyboard_controller:
+            self.keyboard_processor.add_new_mapping(
+                keyboard_controller.LEFT,
+                PlayerAcceleratedEvent(id(player), AccelerationDirection.LEFT)
+            )
+            self.keyboard_processor.add_new_mapping(
+                keyboard_controller.RIGHT,
+                PlayerAcceleratedEvent(id(player), AccelerationDirection.RIGHT)
+            )
+            self.keyboard_processor.add_new_mapping(
+                keyboard_controller.UP,
+                PlayerAcceleratedEvent(id(player), AccelerationDirection.UP)
+            )
+            self.keyboard_processor.add_new_mapping(
+                keyboard_controller.DOWN,
+                PlayerAcceleratedEvent(id(player), AccelerationDirection.DOWN)
+            )
+            self.keyboard_processor.add_new_mapping(
+                keyboard_controller.SHOOT,
+                PlayerShootsEvent(id(player))
+            )
         if len(self.players) >= 2:
             self.__add_info__()
 
@@ -96,10 +124,10 @@ def main():
     clock = pygame.time.Clock()
     config = Config()
     game_controller = GameController(config)
-    player_1 = create_human_player_1(config, game_controller.event_manager)
-    player_2 = create_human_player_2(config, game_controller.event_manager)
-    game_controller.__add_player__(player_1)
-    game_controller.__add_player__(player_2)
+    player_1, p1_controller = create_human_player_1(config, game_controller.event_manager)
+    player_2, p2_controller = create_human_player_2(config, game_controller.event_manager)
+    game_controller.__add_player__(player_1, p1_controller)
+    game_controller.__add_player__(player_2, p2_controller)
     while running:
         clock.tick(config.fps)
 
