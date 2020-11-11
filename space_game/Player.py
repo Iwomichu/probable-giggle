@@ -104,7 +104,6 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                 )
             self.emit_bullet_fired_events(bullet)
             self.ammo_left -= 1
-        print("PEW PEW!")
 
     def emit_bullet_fired_events(self, bullet):
         self.event_manager.add_event(NewObjectCreatedEvent(bullet))

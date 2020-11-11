@@ -23,7 +23,7 @@ class Config:
     player_2_bullet_color = (127, 0, 255)
     bullet_width = 2 * scale
     bullet_height = 5 * scale
-    shoot_cooldown = 10
+    shoot_cooldown = 30
     ammo_maximum = 10
     ammo_countdown = 40
     max_velocity = 8.
@@ -32,4 +32,4 @@ class Config:
     fps = 60
     font = pygame.font.SysFont("arial", 10 * scale)
     player_acceleration = .25
-    ai_input_lag = 20 # amount of frames AI has to wait to act
+    ai_input_lag = 0 # amount of frames AI has to wait to act

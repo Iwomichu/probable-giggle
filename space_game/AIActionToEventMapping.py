@@ -23,10 +23,10 @@ AIActionToEventMapping: List[Callable[[PlayerId], List[Event]]] = [
     lambda player_id: AIActionToEventMapping[2](player_id) + AIActionToEventMapping[0](player_id),
     lambda player_id: AIActionToEventMapping[3](player_id) + AIActionToEventMapping[0](player_id),
     lambda player_id: AIActionToEventMapping[4](player_id) + AIActionToEventMapping[0](player_id),
-    lambda player_id: AIActionToEventMapping[1](player_id) + AIActionToEventMapping[2](player_id) + AIActionToEventMapping[0](player_id),
     lambda player_id: AIActionToEventMapping[1](player_id) + AIActionToEventMapping[3](player_id) + AIActionToEventMapping[0](player_id),
-    lambda player_id: AIActionToEventMapping[2](player_id) + AIActionToEventMapping[2](player_id) + AIActionToEventMapping[0](player_id),
+    lambda player_id: AIActionToEventMapping[1](player_id) + AIActionToEventMapping[4](player_id) + AIActionToEventMapping[0](player_id),
     lambda player_id: AIActionToEventMapping[2](player_id) + AIActionToEventMapping[3](player_id) + AIActionToEventMapping[0](player_id),
+    lambda player_id: AIActionToEventMapping[2](player_id) + AIActionToEventMapping[4](player_id) + AIActionToEventMapping[0](player_id),
 
     lambda player_id: []
 
