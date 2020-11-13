@@ -18,7 +18,7 @@ from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEve
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
-from space_game.ai_controllers.AIController import preprocess_map
+from space_game.ai_controllers.AIController import process_map
 
 
 class SpaceGameEnvironment(gym.Env):
@@ -58,7 +58,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), DamageDealtEvent))
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerShootsEvent))
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
-        self.observation_space = gym.spaces.Box(0, 255, (80, 60))
+        self.observation_space = gym.spaces.Box(high=0, low=255, shape=(64, 64, 3))
 
     def reset(self):
         self.game_controller = GameController(self.config)
@@ -88,7 +88,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerAcceleratedEvent))
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), DamageDealtEvent))
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerShootsEvent))
-        return preprocess_map(self.config.window)
+        return process_map(self.config.window)
 
     def step(self, action: EnvironmentAction):
         self.screenshot_count -= 1
@@ -96,11 +96,11 @@ class SpaceGameEnvironment(gym.Env):
             print("screenshots taken")
             self.screenshot_count = random.randrange(100, 400)
             array_raw = pygame.surfarray.array3d(self.config.window)
-            array_grayscale = array(Image.fromarray(array_raw).convert(mode='L').resize(size=(60, 80)))
+            array_processed = array(Image.fromarray(array_raw).resize(size=(64, 64)))
             if self.save_screenshots:
-                save(f"arr_gs{self.amount_of_screenshots-self.screenshots_left}", array_grayscale)
+                save(f"arr_gs{self.amount_of_screenshots-self.screenshots_left}", array_processed)
                 save(f"arr_raw{self.amount_of_screenshots-self.screenshots_left}", array_raw)
-            self.list_of_screenshots.append((array_raw, array_grayscale))
+            self.list_of_screenshots.append((array_raw, array_processed))
             self.screenshots_left -= 1
         if self.steps_left % 100 == 0:
             print(f"{self.steps_left} steps left!")
@@ -115,18 +115,18 @@ class SpaceGameEnvironment(gym.Env):
             done = True
         self.game_controller.event_manager.process_events()
         info = {"agent_hp": self.agent.hitpoints, "opponent_hp": self.opponent.hitpoints}
-        return preprocess_map(self.config.window), reward, done, info
+        return process_map(self.config.window), reward, done, info
 
     def render(self, mode='human'):
         pass
 
 
 if __name__ == "__main__":
-    from stable_baselines.deepq.policies import LnMlpPolicy
+    from stable_baselines.deepq.policies import CnnPolicy
     from stable_baselines import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(LnMlpPolicy, env, verbose=1)
+    model = DQN(CnnPolicy, env, verbose=1)
     for i in range(1000):
         model.learn(total_timesteps=10**6)
         model.save("deepq_breakout")

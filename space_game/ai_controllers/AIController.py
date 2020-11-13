@@ -11,10 +11,10 @@ from space_game.events.update_events.UpdateAIControllersEvent import UpdateAICon
 from space_game.events.Event import Event
 
 
-def preprocess_map(window) -> np.ndarray:
+def process_map(window) -> np.ndarray:
     array_raw = pygame.surfarray.array3d(window)
-    array_grayscale = np.array(Image.fromarray(array_raw).convert(mode='L').resize(size=(60, 80)))
-    return array_grayscale
+    array_processed = np.array(Image.fromarray(array_raw).resize(size=(Config.scaled_height, Config.scaled_width)))
+    return array_processed
 
 
 class AIController(EventEmitter, EventProcessor):
@@ -39,7 +39,7 @@ class AIController(EventEmitter, EventProcessor):
         self.react()
 
     def get_current_map(self):
-        return preprocess_map(self.config.window)
+        return process_map(self.config.window)
 
     def react(self):
         """
