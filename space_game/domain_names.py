@@ -10,3 +10,4 @@ Shape = Tuple[Size, Size]
 Acceleration = float
 HitPoint = int
 ObjectId = int
+PlayerId = ObjectId

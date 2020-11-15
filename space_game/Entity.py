@@ -10,7 +10,6 @@ from space_game.domain_names import Constraint, Coordinate, Acceleration
 class Entity:
     x: Coordinate
     y: Coordinate
-    sprite: pygame.Surface
     x_constraint: Constraint
     y_constraint: Constraint
     vertical_velocity: Acceleration
