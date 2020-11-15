@@ -6,12 +6,14 @@ from space_game.AccelerationDirection import AccelerationDirection
 from space_game.KeyboardController import KeyboardController
 from space_game.events.ProjectileFiredEvent import ProjectileFiredEvent
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.interfaces.Collisable import Collisable
 from space_game.Config import Config
 from space_game.interfaces.Damagable import Damagable
 from space_game.interfaces.Drawable import Drawable
 from space_game.interfaces.Movable import Movable
+from space_game.interfaces.Registrable import Registrable
 from space_game.interfaces.Stateful import Stateful
 from space_game.events.EventEmitter import EventEmitter
 from space_game.managers.EventManager import EventManager
@@ -30,8 +32,16 @@ from space_game.Entity import Entity
 from space_game.Bullet import Bullet
 
 
-class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawable, Stateful):
-    def __init__(self, entity: Entity, hitpoints: HitPoint, config: Config, side: int, max_ammo: int, event_manager: EventManager) -> None:
+class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawable, Stateful, Registrable):
+    def __init__(
+            self,
+            entity: Entity,
+            hitpoints: HitPoint,
+            config: Config,
+            side: int,
+            max_ammo: int,
+            event_manager: EventManager
+    ) -> None:
         super().__init__(event_manager)
         self.entity = entity
         self.hitpoints = hitpoints
@@ -47,6 +57,16 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
             PlayerShootsEvent: self.process_player_shoots_event,
             Event: lambda e: None
         }
+
+    def register(self, event_manager: EventManager):
+        self.event_manager.add_event(NewObjectCreatedEvent(self))
+        self.event_manager.add_event(NewCollisableAddedEvent(id(self)))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(self)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(self)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(self)))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerAcceleratedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerShootsEvent))
 
     def process_event(self, event: Event):
         self.game_event_resolver.get(type(event))(event)

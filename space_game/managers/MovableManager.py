@@ -23,7 +23,6 @@ class MovableManager(EventProcessor, Registrable):
             UpdateMovablesEvent: self.process_update_movables_event,
             Event: lambda e: None
         }
-        self.register(event_manager)
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))

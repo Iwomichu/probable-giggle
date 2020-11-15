@@ -27,7 +27,6 @@ class CollisionManager(EventEmitter, EventProcessor, Registrable):
             CheckCollisionsEvent: self.process_check_collisions_event,
             Event: lambda e: None
         }
-        self.register(event_manager)
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))

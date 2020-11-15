@@ -39,6 +39,11 @@ class GameController:
         self.movable_manager = MovableManager(event_manager=self.event_manager)
         self.stateful_manager = StatefulsManager(event_manager=self.event_manager)
         self.keyboard_processor = KeyboardEventsProcessor(event_manager=self.event_manager)
+        self.drawable_manager.register(self.event_manager)
+        self.collision_manager.register(self.event_manager)
+        self.movable_manager.register(self.event_manager)
+        self.stateful_manager.register(self.event_manager)
+        self.keyboard_processor.register(self.event_manager)
         self.players: List[Player] = []
 
     def __refresh__(self):
@@ -51,14 +56,7 @@ class GameController:
         self.event_manager.process_events()
 
     def __add_player__(self, player: Player, keyboard_controller: KeyboardController = None) -> None:
-        self.event_manager.add_event(NewObjectCreatedEvent(player))
-        self.event_manager.add_event(NewCollisableAddedEvent(id(player)))
-        self.event_manager.add_event(NewDrawableAddedEvent(id(player)))
-        self.event_manager.add_event(NewMovableAddedEvent(id(player)))
-        self.event_manager.add_event(NewStatefulAddedEvent(id(player)))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), PlayerAcceleratedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), DamageDealtEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(player), PlayerShootsEvent))
+        player.register(self.event_manager)
         self.players.append(player)
         if keyboard_controller:
             self.keyboard_processor.add_new_mapping(
@@ -91,5 +89,4 @@ class GameController:
         self.event_manager.add_event(NewDrawableAddedEvent(id(self.information_display)))
 
     def __add_ai_controller__(self, ai_controller: AIController):
-        self.event_manager.add_event(NewObjectCreatedEvent(ai_controller))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(ai_controller), UpdateAIControllersEvent))
+        ai_controller.register(self.event_manager)

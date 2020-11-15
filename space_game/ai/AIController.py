@@ -8,6 +8,7 @@ from space_game.events.EventEmitter import EventEmitter
 from space_game.events.EventProcessor import EventProcessor
 from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
+from space_game.interfaces.Registrable import Registrable
 from space_game.managers.EventManager import EventManager
 from space_game.events.update_events.UpdateAIControllersEvent import UpdateAIControllersEvent
 from space_game.events.Event import Event
@@ -19,7 +20,7 @@ def process_map(window) -> np.ndarray:
     return array_processed
 
 
-class AIController(EventEmitter, EventProcessor):
+class AIController(EventEmitter, EventProcessor, Registrable):
     def __init__(self, event_manager: EventManager, config: Config, player: Player):
         super().__init__(event_manager)
         self.config = config
@@ -51,5 +52,6 @@ class AIController(EventEmitter, EventProcessor):
         pass
 
     def register(self, event_manager: EventManager):
+        print("AICONTROLLER REGISTER")
         event_manager.add_event(NewObjectCreatedEvent(self))
         event_manager.add_event(NewEventProcessorAddedEvent(id(self), UpdateAIControllersEvent))

@@ -26,7 +26,6 @@ class DrawableManager(EventProcessor, Registrable):
             Event: lambda e: None
         }
         self.config = config
-        self.register(event_manager)
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))
