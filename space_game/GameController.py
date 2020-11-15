@@ -6,17 +6,10 @@ from space_game.InformationDisplay import InformationDisplay
 from space_game.KeyboardController import KeyboardController
 from space_game.Player import Player
 from space_game.ai.AIController import AIController
-from space_game.events.DamageDealtEvent import DamageDealtEvent
-from space_game.events.KeyPressedEvent import KeyPressedEvent
-from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
 from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.PlayerShootsEvent import PlayerShootsEvent
-from space_game.events.creation_events.NewCollisableAddedEvent import NewCollisableAddedEvent
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
-from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
-from space_game.events.creation_events.NewMovableAddedEvent import NewMovableAddedEvent
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
-from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.events.update_events.CheckCollisionsEvent import CheckCollisionsEvent
 from space_game.events.update_events.UpdateAIControllersEvent import UpdateAIControllersEvent
 from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawablesEvent
@@ -34,10 +27,10 @@ class GameController:
     def __init__(self, config: Config):
         self.config = config
         self.event_manager = EventManager()
-        self.drawable_manager = DrawableManager(config, self.event_manager)
+        self.drawable_manager = DrawableManager(config)
         self.collision_manager = CollisionManager(event_manager=self.event_manager)
-        self.movable_manager = MovableManager(event_manager=self.event_manager)
-        self.stateful_manager = StatefulsManager(event_manager=self.event_manager)
+        self.movable_manager = MovableManager()
+        self.stateful_manager = StatefulsManager()
         self.keyboard_processor = KeyboardEventsProcessor(event_manager=self.event_manager)
         self.drawable_manager.register(self.event_manager)
         self.collision_manager.register(self.event_manager)

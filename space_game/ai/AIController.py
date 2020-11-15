@@ -52,6 +52,5 @@ class AIController(EventEmitter, EventProcessor, Registrable):
         pass
 
     def register(self, event_manager: EventManager):
-        print("AICONTROLLER REGISTER")
         event_manager.add_event(NewObjectCreatedEvent(self))
         event_manager.add_event(NewEventProcessorAddedEvent(id(self), UpdateAIControllersEvent))
