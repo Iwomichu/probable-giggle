@@ -34,31 +34,12 @@ class GameController:
     def __init__(self, config: Config):
         self.config = config
         self.event_manager = EventManager()
-        self.drawable_manager = DrawableManager(config)
+        self.drawable_manager = DrawableManager(config, self.event_manager)
         self.collision_manager = CollisionManager(event_manager=self.event_manager)
-        self.movable_manager = MovableManager()
-        self.stateful_manager = StatefulsManager()
+        self.movable_manager = MovableManager(event_manager=self.event_manager)
+        self.stateful_manager = StatefulsManager(event_manager=self.event_manager)
         self.keyboard_processor = KeyboardEventsProcessor(event_manager=self.event_manager)
         self.players: List[Player] = []
-
-        self.event_manager.add_event(NewObjectCreatedEvent(self.drawable_manager))
-        self.event_manager.add_event(NewObjectCreatedEvent(self.collision_manager))
-        self.event_manager.add_event(NewObjectCreatedEvent(self.movable_manager))
-        self.event_manager.add_event(NewObjectCreatedEvent(self.stateful_manager))
-        self.event_manager.add_event(NewObjectCreatedEvent(self.keyboard_processor))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), UpdateDrawablesEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), NewDrawableAddedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.drawable_manager), ObjectDeletedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), CheckCollisionsEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), NewCollisableAddedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.collision_manager), ObjectDeletedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), UpdateMovablesEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), NewMovableAddedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.movable_manager), ObjectDeletedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), NewStatefulAddedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), UpdateStatefulsEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.stateful_manager), ObjectDeletedEvent))
-        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self.keyboard_processor), KeyPressedEvent))
 
     def __refresh__(self):
         self.event_manager.add_event(UpdateDrawablesEvent())

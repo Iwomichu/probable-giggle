@@ -1,18 +1,23 @@
 from typing import Dict
 
+from space_game.Config import Config
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
+from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.interfaces.Drawable import Drawable
 from space_game.domain_names import ObjectId
 from space_game.events.Event import Event
 from space_game.events.EventProcessor import EventProcessor
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
+from space_game.interfaces.Registrable import Registrable
+from space_game.managers.EventManager import EventManager
 from space_game.managers.ObjectsManager import objects_manager
 from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawablesEvent
 import pygame
 
 
-class DrawableManager(EventProcessor):
-    def __init__(self, config):
+class DrawableManager(EventProcessor, Registrable):
+    def __init__(self, config: Config, event_manager: EventManager):
         self.drawables: Dict[ObjectId, Drawable] = {}
         self.event_resolver = {
             NewDrawableAddedEvent: self.process_new_drawable_added_event,
@@ -21,6 +26,13 @@ class DrawableManager(EventProcessor):
             Event: lambda e: None
         }
         self.config = config
+        self.register(event_manager)
+
+    def register(self, event_manager: EventManager):
+        event_manager.add_event(NewObjectCreatedEvent(self))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), NewDrawableAddedEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), ObjectDeletedEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), UpdateDrawablesEvent))
 
     def process_event(self, event: Event):
         self.event_resolver[type(event)](event)
