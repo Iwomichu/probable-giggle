@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from stable_baselines import DQN
 
 from space_game.GameController import GameController
-from space_game.ai_controllers.SBDQNController import SBDQNController
+from space_game.ai.DecisionBasedController import DecisionBasedController
+from space_game.domain_names import Side
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.Config import Config
-from space_game.Player import create_human_player_2, create_player_1
+from space_game.Player import create_human_player_2, create_player_1, create_human_player_1, create_player_2
 
 logger = logging.getLogger()
 
@@ -18,12 +19,12 @@ def main():
     clock = pygame.time.Clock()
     config = Config()
     game_controller = GameController(config)
-    player_2, p2_controller = create_human_player_2(config, game_controller.event_manager)
-    dqn_model = DQN.load("../trained_models/deepq_breakout.zip")
-    player_1 = create_player_1(config, game_controller.event_manager)
-    ai_2 = SBDQNController(game_controller.event_manager, config, player_1, dqn_model)
-    game_controller.__add_player__(player_1)
-    game_controller.__add_player__(player_2, p2_controller)
+    player_1, p1_controller = create_human_player_1(config, game_controller.event_manager)
+    player_2 = create_player_2(config, game_controller.event_manager)
+    ai_2 = DecisionBasedController(game_controller.event_manager, config, player_2, player_1, Side.UP)
+    ai_2.register(game_controller.event_manager)
+    game_controller.__add_player__(player_1, p1_controller)
+    game_controller.__add_player__(player_2)
     game_controller.__add_ai_controller__(ai_2)
     pressed_keys = {}
     while running:
