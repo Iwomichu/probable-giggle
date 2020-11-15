@@ -17,7 +17,7 @@ import pygame
 
 
 class DrawableManager(EventProcessor, Registrable):
-    def __init__(self, config: Config, event_manager: EventManager):
+    def __init__(self, config: Config):
         self.drawables: Dict[ObjectId, Drawable] = {}
         self.event_resolver = {
             NewDrawableAddedEvent: self.process_new_drawable_added_event,

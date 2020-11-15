@@ -54,11 +54,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.__add_player__(self.agent)
         self.history = []
         self.reward_system = RewardSystem(self.config, self.agent)
-        self.game_controller.event_manager.add_event(NewObjectCreatedEvent(self.reward_system))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerDestroyedEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerAcceleratedEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), DamageDealtEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerShootsEvent))
+        self.reward_system.register(self.game_controller.event_manager)
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
         self.observation_space = gym.spaces.Box(high=0, low=255, shape=(64, 64, 3))
 
@@ -87,11 +83,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.__add_player__(self.opponent)
         self.ai_2.register(self.game_controller.event_manager)
         self.reward_system = RewardSystem(self.config, self.agent)
-        self.game_controller.event_manager.add_event(NewObjectCreatedEvent(self.reward_system))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerDestroyedEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerAcceleratedEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), DamageDealtEvent))
-        self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerShootsEvent))
+        self.reward_system.register(self.game_controller.event_manager)
         return process_map(self.config.window)
 
     def step(self, action: EnvironmentAction):

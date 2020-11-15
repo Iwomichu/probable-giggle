@@ -18,7 +18,7 @@ from space_game.events.update_events.UpdateMovablesEvent import UpdateMovablesEv
 
 
 class StatefulsManager(EventProcessor, Registrable):
-    def __init__(self, event_manager: EventManager):
+    def __init__(self):
         self.statefuls: Dict[ObjectId, Stateful] = {}
         self.event_resolver = {
             NewStatefulAddedEvent: self.process_new_stateful_added_event,
