@@ -1,5 +1,6 @@
 import gym
 import pygame
+from numpy import uint8
 
 from env.EnvironmentAction import EnvironmentAction, EnvironmentActionToAIActionMapping
 from env.RewardSystem import RewardSystem
@@ -11,6 +12,7 @@ from space_game.domain_names import Side
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
 from space_game.ai.AIController import process_map
+from stable_baselines.common.env_checker import check_env
 
 
 class SpaceGameEnvironment(gym.Env):
@@ -44,7 +46,7 @@ class SpaceGameEnvironment(gym.Env):
 
         self.history = []
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
-        self.observation_space = gym.spaces.Box(high=0, low=255, shape=(64, 64, 3))
+        self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 3), dtype=uint8)
 
     def reset(self):
         self.game_controller = GameController(self.config)
@@ -101,13 +103,17 @@ class SpaceGameEnvironment(gym.Env):
         pass
 
 
-if __name__ == "__main__":
+def main():
     from stable_baselines.deepq.policies import CnnPolicy
     from stable_baselines import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(CnnPolicy, env, verbose=1)
+    model = DQN(CnnPolicy, env, verbose=1, tensorboard_log="../logs")
     for i in range(1000):
-        model.learn(total_timesteps=10**4)
+        model.learn(total_timesteps=10 ** 4)
         model.save("deepq_breakout")
         print("model_saved")
+
+
+if __name__ == "__main__":
+    main()
