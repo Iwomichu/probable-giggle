@@ -1,10 +1,11 @@
-from random import randrange
+from random import randrange, choice
 
-from space_game.ai_controllers.AIController import AIController
+from space_game.ai.AIAction import AIAction
+from space_game.ai.AIController import AIController
 from space_game.Config import Config
 from space_game.Player import Player
 from space_game.managers.EventManager import EventManager
-from space_game.AIActionToEventMapping import AIActionToEventMapping
+from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 
 
 class RandomAI(AIController):
@@ -13,6 +14,6 @@ class RandomAI(AIController):
 
     def react(self):
         current_map = self.get_current_map()
-        choice = randrange(start=0, stop=len(AIActionToEventMapping))
-        for event in AIActionToEventMapping[choice](id(self.player)):
+        ai_choice = choice(list(AIAction))
+        for event in AIActionToEventMapping[ai_choice](id(self.player)):
             self.event_manager.add_event(event)

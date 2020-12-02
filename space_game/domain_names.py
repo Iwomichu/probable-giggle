@@ -1,5 +1,6 @@
 from collections import namedtuple
 from typing import Tuple
+from enum import Enum, auto
 
 KeyId = int
 Constraint = namedtuple('Constraint', ['min', 'max'])
@@ -11,3 +12,8 @@ Acceleration = float
 HitPoint = int
 ObjectId = int
 PlayerId = ObjectId
+
+
+class Side(Enum):
+    UP = auto()
+    DOWN = auto()

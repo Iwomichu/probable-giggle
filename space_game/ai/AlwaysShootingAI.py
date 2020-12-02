@@ -1,10 +1,8 @@
-from random import randrange
-
-from space_game.ai_controllers.AIController import AIController
+from space_game.ai.AIController import AIController
 from space_game.Config import Config
 from space_game.Player import Player
 from space_game.managers.EventManager import EventManager
-from space_game.AIActionToEventMapping import AIActionToEventMapping
+from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 
 
 class AlwaysShootingAI(AIController):
