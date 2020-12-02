@@ -3,7 +3,7 @@ import pygame
 import random
 
 from PIL import Image
-from numpy import save, array
+from numpy import save, array, uint8
 
 from env.EnvironmentAction import EnvironmentAction
 from env.RewardSystem import RewardSystem
@@ -58,7 +58,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), DamageDealtEvent))
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerShootsEvent))
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
-        self.observation_space = gym.spaces.Box(high=0, low=255, shape=(64, 64, 3))
+        self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 3), dtype=uint8)
 
     def reset(self):
         self.game_controller = GameController(self.config)
@@ -122,11 +122,11 @@ class SpaceGameEnvironment(gym.Env):
 
 
 if __name__ == "__main__":
-    from stable_baselines.deepq.policies import CnnPolicy
-    from stable_baselines import DQN
+    from stable_baselines3.dqn.policies import CnnPolicy
+    from stable_baselines3 import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(CnnPolicy, env, verbose=1)
+    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10*4)
     for i in range(1000):
         model.learn(total_timesteps=10**4)
         model.save("deepq_breakout")

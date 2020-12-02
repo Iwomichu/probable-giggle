@@ -1,8 +1,8 @@
 import pygame
 import pygame.locals
 import logging
-from dataclasses import dataclass
-from stable_baselines import DQN
+
+from stable_baselines3 import DQN
 
 from space_game.GameController import GameController
 from space_game.ai_controllers.SBDQNController import SBDQNController
