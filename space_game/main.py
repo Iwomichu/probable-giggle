@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pygame
 import pygame.locals
 import logging
@@ -9,6 +11,7 @@ from space_game.ai_controllers.SBDQNController import SBDQNController
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.Config import Config
 from space_game.Player import create_human_player_2, create_player_1
+from space_game.Screenshooter import Screenshooter
 
 logger = logging.getLogger()
 
@@ -25,6 +28,7 @@ def main():
     game_controller.__add_player__(player_1)
     game_controller.__add_player__(player_2, p2_controller)
     game_controller.__add_ai_controller__(ai_2)
+    screenshooter = Screenshooter(config, id(player_1), Path("../screenshots"))
     pressed_keys = {}
     while running:
         clock.tick(config.fps)
