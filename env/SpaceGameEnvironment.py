@@ -110,8 +110,8 @@ if __name__ == "__main__":
     from stable_baselines3 import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10*4)
+    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10**4)
     for i in range(1000):
-        model.learn(total_timesteps=10**4)
+        model.learn(total_timesteps=10**5)
         model.save("deepq_breakout")
         print("model_saved")
