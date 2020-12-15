@@ -1,7 +1,11 @@
 from typing import Dict
 from itertools import combinations
 
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
+from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.interfaces.Collisable import Collisable
+from space_game.interfaces.Registrable import Registrable
+from space_game.managers.EventManager import EventManager
 from space_game.managers.ObjectsManager import objects_manager
 from space_game.domain_names import ObjectId
 from space_game.events.update_events.CheckCollisionsEvent import CheckCollisionsEvent
@@ -13,8 +17,8 @@ from space_game.events.CollisionOccurredEvent import CollisionOccurredEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
 
 
-class CollisionManager(EventEmitter, EventProcessor):
-    def __init__(self, event_manager):
+class CollisionManager(EventEmitter, EventProcessor, Registrable):
+    def __init__(self, event_manager: EventManager):
         super().__init__(event_manager)
         self.collisables: Dict[ObjectId, Collisable] = {}
         self.event_resolver = {
@@ -23,6 +27,12 @@ class CollisionManager(EventEmitter, EventProcessor):
             CheckCollisionsEvent: self.process_check_collisions_event,
             Event: lambda e: None
         }
+
+    def register(self, event_manager: EventManager):
+        event_manager.add_event(NewObjectCreatedEvent(self))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), CheckCollisionsEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), NewCollisableAddedEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), ObjectDeletedEvent))
 
     def process_event(self, event: Event):
         self.event_resolver[type(event)](event)
