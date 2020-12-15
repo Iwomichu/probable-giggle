@@ -1,5 +1,6 @@
 import gym
 import pygame
+from numpy import uint8
 
 from env.EnvironmentAction import EnvironmentAction, EnvironmentActionToAIActionMapping
 from PIL import Image
@@ -15,6 +16,7 @@ from space_game.domain_names import Side
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
 from space_game.ai.AIController import process_map
+from stable_baselines.common.env_checker import check_env
 
 
 class SpaceGameEnvironment(gym.Env):
@@ -105,13 +107,17 @@ class SpaceGameEnvironment(gym.Env):
         pass
 
 
-if __name__ == "__main__":
+def main():
     from stable_baselines3.dqn.policies import CnnPolicy
     from stable_baselines3 import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10**4)
+    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10**4, tensorboard_log="../logs")
     for i in range(1000):
         model.learn(total_timesteps=10**5)
         model.save("deepq_breakout")
         print("model_saved")
+
+
+if __name__ == "__main__":
+    main()
