@@ -4,6 +4,7 @@ import pygame
 
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.KeyboardController import KeyboardController
+from space_game.events.ProjectileFiredEvent import ProjectileFiredEvent
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.interfaces.Collisable import Collisable
@@ -111,6 +112,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         self.event_manager.add_event(NewCollisableAddedEvent(id(bullet)))
         self.event_manager.add_event(NewDrawableAddedEvent(id(bullet)))
         self.event_manager.add_event(NewStatefulAddedEvent(id(bullet)))
+        self.event_manager.add_event(ProjectileFiredEvent(id(bullet), id(self)))
         self.shoot_countdown = self.config.shoot_cooldown
 
     def update_state(self):

@@ -6,6 +6,8 @@ from space_game.Config import Config
 from space_game.Player import Player
 from space_game.events.EventEmitter import EventEmitter
 from space_game.events.EventProcessor import EventProcessor
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
+from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.managers.EventManager import EventManager
 from space_game.events.update_events.UpdateAIControllersEvent import UpdateAIControllersEvent
 from space_game.events.Event import Event
@@ -47,3 +49,7 @@ class AIController(EventEmitter, EventProcessor):
         :return:
         """
         pass
+
+    def register(self, event_manager: EventManager):
+        event_manager.add_event(NewObjectCreatedEvent(self))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), UpdateAIControllersEvent))

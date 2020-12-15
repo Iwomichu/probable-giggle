@@ -5,7 +5,7 @@ from space_game.Config import Config
 from space_game.InformationDisplay import InformationDisplay
 from space_game.KeyboardController import KeyboardController
 from space_game.Player import Player
-from space_game.ai_controllers.AIController import AIController
+from space_game.ai.AIController import AIController
 from space_game.events.DamageDealtEvent import DamageDealtEvent
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent

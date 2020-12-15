@@ -5,11 +5,13 @@ import random
 from PIL import Image
 from numpy import save, array
 
-from env.EnvironmentAction import EnvironmentAction
+from env.EnvironmentAction import EnvironmentAction, EnvironmentActionToAIActionMapping
 from env.RewardSystem import RewardSystem
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
-from space_game.AIActionToEventMapping import AIActionToEventMapping
+from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
+from space_game.ai.DecisionBasedController import DecisionBasedController
+from space_game.domain_names import Side
 from space_game.events.DamageDealtEvent import DamageDealtEvent
 from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.PlayerDestroyedEvent import PlayerDestroyedEvent
@@ -18,7 +20,7 @@ from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEve
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
-from space_game.ai_controllers.AIController import process_map
+from space_game.ai.AIController import process_map
 
 
 class SpaceGameEnvironment(gym.Env):
@@ -74,14 +76,16 @@ class SpaceGameEnvironment(gym.Env):
             self.config,
             self.game_controller.event_manager
         )
-        self.ai_2 = SpaceGameEnvironmentConfig.OpponentControllerType(
+        self.ai_2 = DecisionBasedController(
             self.game_controller.event_manager,
             self.config,
-            self.opponent
+            self.opponent,
+            self.agent,
+            Side.DOWN
         )
         self.game_controller.__add_player__(self.agent)
         self.game_controller.__add_player__(self.opponent)
-        self.game_controller.__add_ai_controller__(self.ai_2)
+        self.ai_2.register(self.game_controller.event_manager)
         self.reward_system = RewardSystem(self.config, self.agent)
         self.game_controller.event_manager.add_event(NewObjectCreatedEvent(self.reward_system))
         self.game_controller.event_manager.add_event(NewEventProcessorAddedEvent(id(self.reward_system), PlayerDestroyedEvent))
@@ -91,6 +95,7 @@ class SpaceGameEnvironment(gym.Env):
         return process_map(self.config.window)
 
     def step(self, action: EnvironmentAction):
+        action_parsed = EnvironmentActionToAIActionMapping[action]
         self.screenshot_count -= 1
         if self.screenshot_count <= 0:
             print("screenshots taken")
@@ -105,7 +110,7 @@ class SpaceGameEnvironment(gym.Env):
         if self.steps_left % 100 == 0:
             print(f"{self.steps_left} steps left!")
         self.clock.tick(self.config.fps)
-        for event in AIActionToEventMapping[action](id(self.agent)):
+        for event in AIActionToEventMapping[action_parsed](id(self.agent)):
             self.game_controller.event_manager.add_event(event)
         self.steps_left -= 1
         self.game_controller.__refresh__()
