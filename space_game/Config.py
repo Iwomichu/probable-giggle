@@ -20,8 +20,8 @@ class Config:
     player_1_color = (255, 0, 0)
     player_2_color = (0, 0, 255)
     player_1_bullet_color = (255, 127, 0)
-    player_2_bullet_color = (127, 0, 255)
-    bullet_width = 2 * scale
+    player_2_bullet_color = (0, 127, 255)
+    bullet_width = 3 * scale
     bullet_height = 5 * scale
     shoot_cooldown = 10
     ammo_maximum = 10
