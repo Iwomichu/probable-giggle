@@ -21,6 +21,8 @@ from space_game.Player import create_player_1, create_player_2
 from space_game.ai_controllers.AIController import process_map
 
 
+
+
 class SpaceGameEnvironment(gym.Env):
     def __init__(self, list_of_screenshots=None, amount_of_screenshots=20, save_screenshots=False):
         super(SpaceGameEnvironment, self).__init__()
@@ -97,6 +99,7 @@ class SpaceGameEnvironment(gym.Env):
             self.screenshot_count = random.randrange(100, 400)
             array_raw = pygame.surfarray.array3d(self.config.window)
             array_processed = array(Image.fromarray(array_raw).resize(size=(64, 64)))
+            print(array(Image.fromarray(array_raw).resize(size=(64, 64))))
             if self.save_screenshots:
                 save(f"arr_gs{self.amount_of_screenshots-self.screenshots_left}", array_processed)
                 save(f"arr_raw{self.amount_of_screenshots-self.screenshots_left}", array_raw)

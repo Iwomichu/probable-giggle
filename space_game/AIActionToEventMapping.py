@@ -1,4 +1,5 @@
 from typing import List, Callable
+from enum import Enum
 
 from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.PlayerShootsEvent import PlayerShootsEvent
@@ -31,6 +32,26 @@ AIActionToEventMapping: List[Callable[[PlayerId], List[Event]]] = [
     lambda player_id: []
 
 ]
+
+class ActionIndex(Enum):
+    Shoot = 0
+    MoveLeft = 1
+    MoveRight = 2
+    MoveUp = 3
+    MoveDown = 4
+    MoveLeftUp = 5
+    MoveLeftDown = 6
+    MoveRightUp = 7
+    MoveRightDown = 8
+    MoveLeftShoot = 9
+    MoveRightShoot = 10
+    MoveUpShoot = 11
+    MoveDownShoot = 12
+    MoveLeftUpShoot = 13
+    MoveLeftDownShoot = 14
+    MoveRightUpShoot = 15
+    MoveRightDownShoot = 16
+    StandStill = 17
 #
 # MoveLeft = enum.auto()
 # MoveRight = enum.auto()
