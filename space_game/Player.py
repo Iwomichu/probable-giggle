@@ -48,7 +48,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         self.config = config
         self.side = side
         self.max_ammo = max_ammo
-        self.ammo_left = self.max_ammo
+        self.ammo_left = 0
         self.shoot_countdown = 0
         self.ammo_countdown = -1
         self.game_event_resolver = {
