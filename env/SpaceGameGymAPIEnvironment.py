@@ -3,6 +3,10 @@ import pygame
 from numpy import uint8
 
 from env.EnvironmentAction import EnvironmentAction, EnvironmentActionToAIActionMapping
+from PIL import Image
+from numpy import save, array, uint8
+
+from env.EnvironmentAction import EnvironmentAction
 from env.RewardSystem import RewardSystem
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
@@ -104,13 +108,13 @@ class SpaceGameEnvironment(gym.Env):
 
 
 def main():
-    from stable_baselines.deepq.policies import CnnPolicy
-    from stable_baselines import DQN
+    from stable_baselines3.dqn.policies import CnnPolicy
+    from stable_baselines3 import DQN
 
     env = SpaceGameEnvironment()
-    model = DQN(CnnPolicy, env, verbose=1, tensorboard_log="../logs")
+    model = DQN(CnnPolicy, env, verbose=1, buffer_size=10**4, tensorboard_log="../logs")
     for i in range(1000):
-        model.learn(total_timesteps=10 ** 4)
+        model.learn(total_timesteps=10**5)
         model.save("deepq_breakout")
         print("model_saved")
 
