@@ -16,7 +16,7 @@ from itertools import count
 from env import SpaceGameEnvironmentConfig
 from env import EnvironmentAction
 from env.RewardSystem import RewardSystem
-from space_game.AIActionToEventMapping import AIActionToEventMapping
+from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
 from space_game.GameController import GameController
 from space_game.Player import create_human_player_1, create_human_player_2
