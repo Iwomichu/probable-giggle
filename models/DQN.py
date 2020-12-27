@@ -33,7 +33,11 @@ Transition = namedtuple('Transition',
 def process_map(window) -> np.ndarray:
     array_raw = pygame.surfarray.array3d(window)
     array_processed = np.array(Image.fromarray(array_raw).resize(size=(Config.scaled_height, Config.scaled_width)))
-    return torch.tensor(array_processed).transpose(2, 0).unsqueeze(0).to(device).type(torch.cuda.FloatTensor)
+    tensor = torch.tensor(array_processed).transpose(2, 0).unsqueeze(0).to(device)
+    if device == "cuda":
+        return tensor.type(torch.cuda.FloatTensor)
+    else:
+        return tensor.type(torch.FloatTensor)
 
 def get_agent_position(agent):
     agent.get_coordinates()
@@ -101,7 +105,8 @@ class SGEnv(gym.Env):
     def step(self, action: EnvironmentAction):
 
         self.clock.tick(self.config.fps)
-        for event in AIActionToEventMapping[action](id(self.agent)):
+        events = AIActionToEventMapping.get(EnvironmentAction.EnvironmentActionToAIActionMapping.get(action))(id(self.agent))
+        for event in events:
             #print(event)
             self.game_controller.event_manager.add_event(event)
         done = self.reward_system.is_game_over()
