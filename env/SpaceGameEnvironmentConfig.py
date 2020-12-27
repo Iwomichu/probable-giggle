@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from space_game.ai_controllers.RandomAI import RandomAI
-from space_game.ai_controllers.AlwaysShootingAI import AlwaysShootingAI
+from space_game.ai.RandomAI import RandomAI
+from space_game.ai.AlwaysShootingAI import AlwaysShootingAI
 
 
 @dataclass()

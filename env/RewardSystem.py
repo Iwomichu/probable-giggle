@@ -7,9 +7,13 @@ from space_game.events.PlayerDestroyedEvent import PlayerDestroyedEvent
 from space_game.events.PlayerShootsEvent import PlayerShootsEvent
 from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.DamageDealtEvent import DamageDealtEvent
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
+from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
+from space_game.interfaces.Registrable import Registrable
+from space_game.managers.EventManager import EventManager
 
 
-class RewardSystem(EventProcessor):
+class RewardSystem(EventProcessor, Registrable):
     def __init__(self, game_config: Config, agent: Player):
         super().__init__()
         self.agent = agent
@@ -23,6 +27,13 @@ class RewardSystem(EventProcessor):
         self.game_config = game_config
         self.current_reward = 0.
         self.done = False
+
+    def register(self, event_manager: EventManager):
+        event_manager.add_event(NewObjectCreatedEvent(self))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerDestroyedEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerAcceleratedEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), DamageDealtEvent))
+        event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerShootsEvent))
 
     def process_event(self, event: Event):
         self.event_resolver[type(event)](event)
