@@ -46,7 +46,7 @@ class RewardSystem(EventProcessor, Registrable):
             self.current_reward += self.environment_config.target_hit_reward
 
     def process_player_destroyed_event(self, event: PlayerDestroyedEvent):
-        if event.player_id == id:
+        if event.player_id == id(self.agent):
             self.current_reward += self.environment_config.game_lost_reward
         else:
             self.current_reward += self.environment_config.game_won_reward

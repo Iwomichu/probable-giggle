@@ -171,7 +171,7 @@ def main():
         cumulative_reward = 0.
         for t in range(3000):
             action = select_action(state)
-            observation, reward, done, _ = env.step(action.item())
+            observation, reward, done, info = env.step(action.item())
             cumulative_reward += reward
             if reward > 0:
                 print(reward)
@@ -185,8 +185,6 @@ def main():
             memory.push(state, action, next_state, reward)
             state = next_state
             optimize_model()
-            if t % 100 == 0:
-                print(t)
             if done:
                 break
 
