@@ -10,6 +10,8 @@ from torch.utils.tensorboard.writer import SummaryWriter
 
 from env import SpaceGameGymAPIEnvironment
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 
@@ -67,8 +69,7 @@ class DQN(nn.Module):
         return self.head(x.view(x.size()[0], -1))
 
 
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def main():
 
     writer = SummaryWriter()
 
@@ -91,8 +92,8 @@ if __name__ == "__main__":
 
     memory = ReplayMemory(10000)
 
+    global steps_done
     steps_done = 0
-
 
     def select_action(state):
         global steps_done
@@ -104,7 +105,6 @@ if __name__ == "__main__":
                 return policy_net(state).max(1)[1].view(1, 1)
         else:
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
-
 
     def optimize_model():
         if len(memory) < BATCH_SIZE:
@@ -132,7 +132,6 @@ if __name__ == "__main__":
         for param in policy_net.parameters():
             param.grad.data.clamp_(-1, 1)
         optimizer.step()
-
 
     # Training loop
     num_episodes = 3000
@@ -165,3 +164,6 @@ if __name__ == "__main__":
                 break
 
     print("STOP")
+
+if __name__ == "__main__":
+    main()
