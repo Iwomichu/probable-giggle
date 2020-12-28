@@ -1,9 +1,8 @@
 import numpy as np
-
 from pathlib import Path
-from typing import Union
 from time import time
 
+from space_game.Screen import Screen
 from space_game.ai.AIAction import AIAction
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.Config import Config
@@ -20,7 +19,7 @@ from space_game.managers.EventManager import EventManager
 
 
 class Screenshooter(EventProcessor, Registrable):
-    def __init__(self, config: Config, player_id: ObjectId, path: Path):
+    def __init__(self, config: Config, player_id: ObjectId, path: Path, screen: Screen):
         self.config = config
         self.player_id = player_id
         self.screen_saving_path = path
@@ -29,6 +28,7 @@ class Screenshooter(EventProcessor, Registrable):
             PlayerShootsEvent: self.process_player_shoots,
             Event: lambda e: None
         }
+        self.screen = screen
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))
@@ -51,11 +51,11 @@ class Screenshooter(EventProcessor, Registrable):
             else:
                 action = AIAction.StandStill
 
-            screenshot = process_map(self.config.window)
+            screenshot = process_map(self.screen)
             np.save(str(self.screen_saving_path.absolute() / str(int(time()))), (screenshot, action))
 
     def process_player_shoots(self, event: PlayerShootsEvent):
         if event.player_id == self.player_id:
-            screenshot = process_map(self.config.window)
+            screenshot = process_map(self.screen)
             np.save(str(self.screen_saving_path.absolute() / str(int(time()))), (screenshot, AIAction.Shoot))
 

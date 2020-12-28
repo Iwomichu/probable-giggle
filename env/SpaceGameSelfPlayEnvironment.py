@@ -87,7 +87,7 @@ class SpaceGameSelfPlayEnvironment:
         self.reward_system_2 = RewardSystem(self.config, self.agent_2)
         self.reward_system_2.register(self.game_controller.event_manager)
 
-        current_observation = process_map(self.config.window)
+        current_observation = process_map(self.game_controller.screen)
 
         return current_observation, SpaceGameSelfPlayEnvironment.convert_observation(current_observation)
 
@@ -129,6 +129,6 @@ class SpaceGameSelfPlayEnvironment:
         if self.steps_left == 0:
             done_2 = True
 
-        observation = process_map(self.config.window)
+        observation = process_map(self.game_controller.screen)
         return (reward_1, observation, done_1), \
                (reward_2, SpaceGameSelfPlayEnvironment.convert_observation(observation), done_2)

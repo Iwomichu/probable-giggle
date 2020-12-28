@@ -2,28 +2,22 @@ import gym
 import pygame
 from numpy import uint8
 
-from env.EnvironmentAction import EnvironmentAction, EnvironmentActionToAIActionMapping
-from PIL import Image
-from numpy import save, array, uint8
-
+from env.EnvironmentAction import EnvironmentActionToAIActionMapping
 from env.EnvironmentAction import EnvironmentAction
 from env.RewardSystem import RewardSystem
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
-from space_game.ai.DecisionBasedController import DecisionBasedController
 from space_game.domain_names import Side
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
 from space_game.ai.AIController import process_map
-from stable_baselines.common.env_checker import check_env
 
 
 class SpaceGameEnvironment(gym.Env):
     def __init__(self):
         super(SpaceGameEnvironment, self).__init__()
         self.running = True
-        self.clock = pygame.time.Clock()
         self.config = Config()
         self.game_controller = GameController(self.config)
         self.steps_left = SpaceGameEnvironmentConfig.max_steps
@@ -45,7 +39,10 @@ class SpaceGameEnvironment(gym.Env):
         self.ai_2 = SpaceGameEnvironmentConfig.OpponentControllerType(
             self.game_controller.event_manager,
             self.config,
-            self.opponent
+            self.opponent,
+            self.agent,
+            Side.DOWN,
+            self.game_controller.screen
         )
 
         self.history = []
@@ -54,7 +51,6 @@ class SpaceGameEnvironment(gym.Env):
 
     def reset(self):
         self.game_controller = GameController(self.config)
-        self.clock = pygame.time.Clock()
 
         self.steps_left = SpaceGameEnvironmentConfig.max_steps
 
@@ -72,21 +68,20 @@ class SpaceGameEnvironment(gym.Env):
             self.config,
             self.game_controller.event_manager
         )
-        self.ai_2 = DecisionBasedController(
+        self.ai_2 = SpaceGameEnvironmentConfig.OpponentControllerType(
             self.game_controller.event_manager,
             self.config,
             self.opponent,
             self.agent,
-            Side.DOWN
+            Side.DOWN,
+            self.game_controller.screen
         )
         self.game_controller.__add_player__(self.opponent)
         self.ai_2.register(self.game_controller.event_manager)
 
-        return process_map(self.config.window)
+        return process_map(self.game_controller.screen)
 
     def step(self, action: EnvironmentAction):
-        self.clock.tick(self.config.fps)
-
         # AGENT CHOICE HANDLING
         action_parsed = EnvironmentActionToAIActionMapping[action]
         for event in AIActionToEventMapping[action_parsed](id(self.agent)):
@@ -101,7 +96,7 @@ class SpaceGameEnvironment(gym.Env):
             done = True
 
         info = {"agent_hp": self.agent.hitpoints, "opponent_hp": self.opponent.hitpoints}
-        return process_map(self.config.window), reward, done, info
+        return process_map(self.game_controller.screen), reward, done, info
 
     def render(self, mode='human'):
         pass

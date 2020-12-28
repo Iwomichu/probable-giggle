@@ -1,6 +1,7 @@
 from typing import Dict, List, Union
 from random import randint
 
+from space_game.Screen import Screen
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
 from space_game.Player import Player
@@ -10,7 +11,6 @@ from space_game.ai.AIController import AIController
 from space_game.domain_names import ObjectId, Side
 from space_game.events.Event import Event
 from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
-from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.managers.EventManager import EventManager
 from space_game.events.ProjectileFiredEvent import ProjectileFiredEvent
 from space_game.events.ObjectDeletedEvent import ObjectDeletedEvent
@@ -32,8 +32,8 @@ def shooting_modifier() -> AIAction:
 
 
 class DecisionBasedController(AIController):
-    def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side):
-        super().__init__(event_manager, config, player)
+    def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side, screen: Screen):
+        super().__init__(event_manager, config, player, opponent, side, screen)
         self.opponent = opponent
         self.interaction_margin = 10
         self.side = side

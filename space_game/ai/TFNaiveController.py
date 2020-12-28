@@ -12,8 +12,8 @@ from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 
 
 class TFNaiveController(AIController):
-    def __init__(self, event_manager: EventManager, config: Config, player: Player):
-        super().__init__(event_manager, config, player)
+    def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side, screen: Screen):
+        super().__init__(event_manager, config, player, opponent, side, screen)
         self.model = tf.keras.models.load_model('../saved_models/tensorflow_naive')
         self.cooldown_max = 30
         self.cooldown = self.cooldown_max
