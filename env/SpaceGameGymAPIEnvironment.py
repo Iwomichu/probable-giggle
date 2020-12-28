@@ -15,30 +15,36 @@ from space_game.ai.AIController import process_map
 
 
 class SpaceGameEnvironment(gym.Env):
-    def __init__(self):
+    def __init__(
+            self,
+            environment_config: SpaceGameEnvironmentConfig = SpaceGameEnvironmentConfig(),
+            game_config: Config = Config()
+    ):
         super(SpaceGameEnvironment, self).__init__()
         self.running = True
-        self.config = Config()
-        self.game_controller = GameController(self.config)
+        self.game_config = game_config
+        self.environment_config = environment_config
+        self.renderable = environment_config.render
+        self.game_controller = GameController(self.game_config, self.renderable)
         self.steps_left = SpaceGameEnvironmentConfig.max_steps
 
         # AGENT INITIALIZATION
         self.agent = create_player_1(
-            self.config,
+            self.game_config,
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent)
-        self.reward_system = RewardSystem(self.config, self.agent)
+        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent)
         self.reward_system.register(self.game_controller.event_manager)
 
         # OPPONENT INITIALIZATION
         self.opponent = create_player_2(
-            self.config,
+            self.game_config,
             self.game_controller.event_manager
         )
-        self.ai_2 = SpaceGameEnvironmentConfig.OpponentControllerType(
+        self.ai_2 = self.environment_config.OpponentControllerType(
             self.game_controller.event_manager,
-            self.config,
+            self.game_config,
             self.opponent,
             self.agent,
             Side.DOWN,
@@ -50,27 +56,27 @@ class SpaceGameEnvironment(gym.Env):
         self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 3), dtype=uint8)
 
     def reset(self):
-        self.game_controller = GameController(self.config)
+        self.game_controller = GameController(self.game_config, self.renderable)
 
-        self.steps_left = SpaceGameEnvironmentConfig.max_steps
+        self.steps_left = self.environment_config.max_steps
 
         # AGENT INITIALIZATION
         self.agent = create_player_1(
-            self.config,
+            self.game_config,
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent)
-        self.reward_system = RewardSystem(self.config, self.agent)
+        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent)
         self.reward_system.register(self.game_controller.event_manager)
 
         # OPPONENT INITIALIZATION
         self.opponent = create_player_2(
-            self.config,
+            self.game_config,
             self.game_controller.event_manager
         )
-        self.ai_2 = SpaceGameEnvironmentConfig.OpponentControllerType(
+        self.ai_2 = self.environment_config.OpponentControllerType(
             self.game_controller.event_manager,
-            self.config,
+            self.game_config,
             self.opponent,
             self.agent,
             Side.DOWN,
@@ -82,6 +88,8 @@ class SpaceGameEnvironment(gym.Env):
         return process_map(self.game_controller.screen)
 
     def step(self, action: EnvironmentAction):
+        if self.renderable:
+            self.game_controller.render_screen()
         # AGENT CHOICE HANDLING
         action_parsed = EnvironmentActionToAIActionMapping[action]
         for event in AIActionToEventMapping[action_parsed](id(self.agent)):

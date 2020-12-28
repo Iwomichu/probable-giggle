@@ -4,11 +4,8 @@ import pygame
 import pygame.locals
 import logging
 
-from stable_baselines3 import DQN
-
 from space_game.GameController import GameController
 from space_game.ai.DecisionBasedController import DecisionBasedController
-from space_game.ai.TFNaiveController import TFNaiveController
 from space_game.domain_names import Side
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.Config import Config

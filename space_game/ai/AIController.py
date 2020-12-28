@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+from abc import ABCMeta
 
 from space_game.Config import Config
 from space_game.Player import Player

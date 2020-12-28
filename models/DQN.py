@@ -1,4 +1,6 @@
 import math
+from typing import Tuple
+
 import torch
 import random
 import gym
@@ -9,15 +11,18 @@ from torch import optim
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from env import SpaceGameGymAPIEnvironment
-
+from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
+from space_game.ai.DecisionBasedController import DecisionBasedController
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+HasAgentWon = bool
+GameLength = int
 
 
 def process_observation(observation: gym.spaces.Box) -> torch.Tensor:
     tensor = torch.tensor(observation).transpose(2, 0).unsqueeze(0).to(device)
-    if device == "cuda":
+    if torch.cuda.is_available():
         return tensor.type(torch.cuda.FloatTensor)
     else:
         return tensor.type(torch.FloatTensor)
@@ -62,7 +67,7 @@ class DQN(nn.Module):
         linear_input_size = convw * convh * 32
         self.head = nn.Linear(linear_input_size, outputs)
 
-    def forward(self, x):
+    def forward(self, x: torch.IntTensor):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -79,8 +84,14 @@ def main():
     EPS_END = 0.05
     EPS_DECAY = 200
     TARGET_UPDATE = 10
-
-    env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment()
+    env_config = SpaceGameEnvironmentConfig(
+        render=False,
+        OpponentControllerType=DecisionBasedController,
+        step_reward=-.01,
+        target_hit_reward=10,
+        taken_damage_reward=-10,
+    )
+    env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
     random_screen = process_observation(env.observation_space.sample())
     _, _, screen_height, screen_width = random_screen.shape
     n_actions = env.action_space.n
@@ -133,15 +144,32 @@ def main():
             param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
+    def test_run() -> Tuple[GameLength, HasAgentWon]:
+        previous_observation = process_observation(env.reset())
+        current_observation = previous_observation
+        done = False
+        game_length = 0
+        info = {'agent_hp': float('inf')}
+        while not done:
+            state = previous_observation - current_observation
+            action = policy_net(state).max(1)[1].view(1, 1)
+            observation, _, done, info = env.step(action.item())
+            previous_observation = current_observation
+            current_observation = process_observation(observation)
+            game_length += 1
+
+        return game_length, info['agent_hp'] > 0
+
     # Training loop
     num_episodes = 3000
+    test_episode_count = 0
     for i_episode in range(num_episodes):
         observation = env.reset()
         last_screen = process_observation(observation)
         current_screen = process_observation(observation)
         state = current_screen - last_screen
         cumulative_reward = 0.
-        for t in range(4000):
+        for t in range(3000):
             action = select_action(state)
             observation, reward, done, _ = env.step(action.item())
             cumulative_reward += reward
@@ -160,8 +188,45 @@ def main():
             if t % 100 == 0:
                 print(t)
             if done:
-                writer.add_scalar("Reward", cumulative_reward, i_episode)
                 break
+
+        writer.add_scalar("Episode reward", cumulative_reward, i_episode)
+        # every 50 episodes conduct 10 test games (games with no learning)
+        # test log should contain:
+        # * win ratio
+        # * average game length
+        # * average won game length
+        # * average lost game length
+        # * video of each game (this needs to be presented outside of TensorBoard)
+        if (i_episode+1) % 50 == 0:
+            with torch.no_grad():
+                games_won_lengths = []
+                games_lost_lengths = []
+                for i_test_run in range(10):
+                    game_length, has_won = test_run()
+                    if has_won:
+                        games_won_lengths.append(game_length)
+                    else:
+                        games_lost_lengths.append(game_length)
+                win_ratio = len(games_won_lengths)/10
+                won_game_average_length = sum(games_won_lengths)/len(games_won_lengths)
+                lost_game_average_length = sum(games_lost_lengths)/len(games_lost_lengths)
+                game_average_length = sum(games_won_lengths+games_lost_lengths)/10
+                writer.add_scalar("Test episode win ratio", win_ratio, test_episode_count)
+                writer.add_scalar("Test episode won game average length", won_game_average_length, test_episode_count)
+                writer.add_scalar("Test episode lost game average length", lost_game_average_length, test_episode_count)
+                writer.add_scalar("Test episode game average length", game_average_length, test_episode_count)
+                print("======================")
+                print(f"Test episode {test_episode_count} stats: ")
+                print("======================")
+                print(f"win_ratio: {win_ratio}")
+                print(f"won_game_average_length: {won_game_average_length}")
+                print(f"lost_game_average_length: {lost_game_average_length}")
+                print(f"game_average_length: {game_average_length}")
+                print("======================")
+                test_episode_count += 1
+
+
 
     print("STOP")
 
