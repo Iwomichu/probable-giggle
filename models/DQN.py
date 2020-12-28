@@ -1,13 +1,12 @@
 import math
+import torch
 import random
-from collections import namedtuple
-
 import gym
 import torch.nn as nn
 import torch.nn.functional as F
-from opt_einsum.backends import torch
+from collections import namedtuple
 from torch import optim
-import torch
+from torch.utils.tensorboard.writer import SummaryWriter
 
 from env import SpaceGameGymAPIEnvironment
 
@@ -70,6 +69,8 @@ class DQN(nn.Module):
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    writer = SummaryWriter()
 
     BATCH_SIZE = 128
     GAMMA = 0.999
@@ -134,15 +135,17 @@ if __name__ == "__main__":
 
 
     # Training loop
-    num_episodes = 200
+    num_episodes = 3000
     for i_episode in range(num_episodes):
         observation = env.reset()
         last_screen = process_observation(observation)
         current_screen = process_observation(observation)
         state = current_screen - last_screen
-        for t in range(2000):
+        cumulative_reward = 0.
+        for t in range(4000):
             action = select_action(state)
             observation, reward, done, _ = env.step(action.item())
+            cumulative_reward += reward
             if reward > 0:
                 print(reward)
             reward = torch.tensor([reward], device=device)
@@ -158,4 +161,7 @@ if __name__ == "__main__":
             if t % 100 == 0:
                 print(t)
             if done:
+                writer.add_scalar("Reward", cumulative_reward, i_episode)
                 break
+
+    print("STOP")

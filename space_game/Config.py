@@ -29,7 +29,7 @@ class Config:
     max_velocity = 8.
     bullet_velocity = 10.
     window = pygame.display.set_mode((width, height))
-    fps = 60
+    fps = 20
     font = pygame.font.SysFont("arial", 10 * scale)
     player_acceleration = .25
     ai_input_lag = 0  # amount of frames AI has to wait to act
