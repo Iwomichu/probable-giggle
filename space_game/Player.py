@@ -4,13 +4,16 @@ import pygame
 
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.KeyboardController import KeyboardController
+from space_game.events.ProjectileFiredEvent import ProjectileFiredEvent
 from space_game.events.creation_events.NewDrawableAddedEvent import NewDrawableAddedEvent
+from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
 from space_game.events.creation_events.NewStatefulAddedEvent import NewStatefulAddedEvent
 from space_game.interfaces.Collisable import Collisable
 from space_game.Config import Config
 from space_game.interfaces.Damagable import Damagable
 from space_game.interfaces.Drawable import Drawable
 from space_game.interfaces.Movable import Movable
+from space_game.interfaces.Registrable import Registrable
 from space_game.interfaces.Stateful import Stateful
 from space_game.events.EventEmitter import EventEmitter
 from space_game.managers.EventManager import EventManager
@@ -29,15 +32,23 @@ from space_game.Entity import Entity
 from space_game.Bullet import Bullet
 
 
-class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawable, Stateful):
-    def __init__(self, entity: Entity, hitpoints: HitPoint, config: Config, side: int, max_ammo: int, event_manager: EventManager) -> None:
+class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawable, Stateful, Registrable):
+    def __init__(
+            self,
+            entity: Entity,
+            hitpoints: HitPoint,
+            config: Config,
+            side: int,
+            max_ammo: int,
+            event_manager: EventManager
+    ) -> None:
         super().__init__(event_manager)
         self.entity = entity
         self.hitpoints = hitpoints
         self.config = config
         self.side = side
         self.max_ammo = max_ammo
-        self.ammo_left = self.max_ammo
+        self.ammo_left = 0
         self.shoot_countdown = 0
         self.ammo_countdown = -1
         self.game_event_resolver = {
@@ -46,6 +57,16 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
             PlayerShootsEvent: self.process_player_shoots_event,
             Event: lambda e: None
         }
+
+    def register(self, event_manager: EventManager):
+        self.event_manager.add_event(NewObjectCreatedEvent(self))
+        self.event_manager.add_event(NewCollisableAddedEvent(id(self)))
+        self.event_manager.add_event(NewDrawableAddedEvent(id(self)))
+        self.event_manager.add_event(NewMovableAddedEvent(id(self)))
+        self.event_manager.add_event(NewStatefulAddedEvent(id(self)))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerAcceleratedEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), DamageDealtEvent))
+        self.event_manager.add_event(NewEventProcessorAddedEvent(id(self), PlayerShootsEvent))
 
     def process_event(self, event: Event):
         self.game_event_resolver.get(type(event))(event)
@@ -88,7 +109,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                         y=self.entity.y + (self.entity.height + 5 * self.config.scale if self.side == 1 else -5 * self.config.scale),
                         x_constraint=Constraint(0, self.config.width),
                         y_constraint=Constraint(0, self.config.height),
-                        vertical_velocity=self.config.bullet_velocity * (1. if self.side == 1 else -1.),
+                        vertical_velocity=self.config.bullet_velocity * (1 if self.side == 1 else -1),
                         horizontal_velocity=0,
                         width=self.config.bullet_width,
                         height=self.config.bullet_height,
@@ -97,7 +118,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                             if self.side == 1
                             else self.config.player_2_bullet_color
                         ),
-                        acceleration=0.,
+                        acceleration=0,
                         respect_constraints=False,
                         max_velocity=self.config.max_velocity
                     ), 1, self.event_manager
@@ -111,6 +132,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
         self.event_manager.add_event(NewCollisableAddedEvent(id(bullet)))
         self.event_manager.add_event(NewDrawableAddedEvent(id(bullet)))
         self.event_manager.add_event(NewStatefulAddedEvent(id(bullet)))
+        self.event_manager.add_event(ProjectileFiredEvent(id(bullet), id(self)))
         self.shoot_countdown = self.config.shoot_cooldown
 
     def update_state(self):
@@ -148,12 +170,12 @@ def create_player(config: Config, entity: Entity, event_manager: EventManager, s
 
 def create_player_1(config: Config, event_manager: EventManager) -> Player:
     player_1_entity = Entity(
-        x=config.width / 2,
+        x=config.width // 2,
         y=100,
         x_constraint=config.player_1_width_constraint,
         y_constraint=config.player_1_height_constraint,
-        vertical_velocity=1.,
-        horizontal_velocity=0.,
+        vertical_velocity=1,
+        horizontal_velocity=0,
         width=config.player_size,
         height=config.player_size,
         color=config.player_1_color,
@@ -165,12 +187,12 @@ def create_player_1(config: Config, event_manager: EventManager) -> Player:
 
 def create_player_2(config: Config, event_manager: EventManager) -> Player:
     player_2_entity = Entity(
-        x=config.width / 2,
+        x=config.width // 2,
         y=config.height - 100,
         x_constraint=config.player_2_width_constraint,
         y_constraint=config.player_2_height_constraint,
-        vertical_velocity=-1.,
-        horizontal_velocity=0.,
+        vertical_velocity=-1,
+        horizontal_velocity=0,
         width=config.player_size,
         height=config.player_size,
         color=config.player_2_color,
