@@ -53,7 +53,4 @@ class DrawableManager(EventProcessor, Registrable):
         self.update_drawables()
 
     def redraw_window(self):
-        # surface = pygame.Surface((self.config.width, self.config.height))
-        # surface.fill(([0, 0, 0]))
-        # self.config.window.blit(surface, (0, 0))
         self.screen.reset_screen()

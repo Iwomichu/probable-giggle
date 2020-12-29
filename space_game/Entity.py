@@ -21,8 +21,6 @@ class Entity:
     respect_constraints: bool = True
 
     def draw(self, screen: Screen) -> None:
-        # pygame.draw.rect(window, self.color, (self.x, self.y, self.width, self.height))
-        # screen[self.x:self.x+self.width, self.y:self.y+self.height] = np.array(self.color)
         screen.draw_rect(self.x, self.width, self.y, self.height, self.color)
 
     def accelerate_horizontally(self, amount: Acceleration) -> None:

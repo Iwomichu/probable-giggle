@@ -23,8 +23,14 @@ def main():
     game_controller = GameController(config, renderable=True)
     player_1, p1_controller = create_human_player_2(config, game_controller.event_manager)
     player_2 = create_player_1(config, game_controller.event_manager)
-    ai_2 = DecisionBasedController(game_controller.event_manager, config, player_2, player_1, Side.UP, game_controller.screen)
-    # ai_2 = TFNaiveController(game_controller.event_manager, config, player_2)
+    ai_2 = DecisionBasedController(
+        game_controller.event_manager,
+        config,
+        player_2,
+        player_1,
+        Side.UP,
+        game_controller.screen
+    )
     game_controller.__add_player__(player_2)
     game_controller.__add_player__(player_1, p1_controller)
     game_controller.__add_ai_controller__(ai_2)
