@@ -16,3 +16,4 @@ class SpaceGameEnvironmentConfig:
     game_won_reward: float = 40.
     action_taken_reward: float = 0
     max_steps: float = float("inf")
+    step_delay: int = 5

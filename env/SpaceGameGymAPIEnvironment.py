@@ -94,7 +94,8 @@ class SpaceGameEnvironment(gym.Env):
         action_parsed = EnvironmentActionToAIActionMapping[action]
         for event in AIActionToEventMapping[action_parsed](id(self.agent)):
             self.game_controller.event_manager.add_event(event)
-        self.game_controller.__refresh__()
+        for _ in range(self.environment_config.step_delay):
+            self.game_controller.__refresh__()
 
         # REWARD CALCULATION
         self.steps_left -= 1

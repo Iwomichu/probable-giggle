@@ -86,7 +86,7 @@ def main():
     TARGET_UPDATE = 10
     N_TEST_RUNS = 10
     env_config = SpaceGameEnvironmentConfig(
-        render=False,
+        render=True,
         OpponentControllerType=DecisionBasedController,
         step_reward=-.01,
         target_hit_reward=10,
@@ -192,8 +192,6 @@ def main():
             action = select_action(state)
             observation, reward, done, info = env.step(action.item())
             cumulative_reward += reward
-            if reward > 0:
-                print(reward)
             reward = torch.tensor([reward], device=device)
             last_screen = current_screen
             current_screen = process_observation(observation)
@@ -229,8 +227,14 @@ def main():
                     else:
                         games_lost_lengths.append(game_length)
                 win_ratio = len(games_won_lengths)/N_TEST_RUNS
-                won_game_average_length = sum(games_won_lengths)/len(games_won_lengths)
-                lost_game_average_length = sum(games_lost_lengths)/len(games_lost_lengths)
+                if games_won_lengths:
+                    won_game_average_length = sum(games_won_lengths)/len(games_won_lengths)
+                else:
+                    won_game_average_length = 0
+                if games_lost_lengths:
+                    lost_game_average_length = sum(games_lost_lengths)/len(games_lost_lengths)
+                else:
+                    lost_game_average_length = 0
                 game_average_length = sum(games_won_lengths+games_lost_lengths)/N_TEST_RUNS
                 writer.add_scalar("Test episode win ratio", win_ratio, test_episode_count)
                 writer.add_scalar("Test episode won game average length", won_game_average_length, test_episode_count)
