@@ -84,6 +84,7 @@ def main():
     EPS_END = 0.05
     EPS_DECAY = 200
     TARGET_UPDATE = 10
+    N_TEST_RUNS = 10
     env_config = SpaceGameEnvironmentConfig(
         render=False,
         OpponentControllerType=DecisionBasedController,
@@ -217,20 +218,20 @@ def main():
         # * average won game length
         # * average lost game length
         # * video of each game (this needs to be presented outside of TensorBoard)
-        if (i_episode+1) % 2 == 0:
+        if (i_episode+1) % 50 == 0:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []
-                for i_test_run in range(10):
+                for i_test_run in range(N_TEST_RUNS):
                     game_length, has_won = test_run()
                     if has_won:
                         games_won_lengths.append(game_length)
                     else:
                         games_lost_lengths.append(game_length)
-                win_ratio = len(games_won_lengths)/10
+                win_ratio = len(games_won_lengths)/N_TEST_RUNS
                 won_game_average_length = sum(games_won_lengths)/len(games_won_lengths)
                 lost_game_average_length = sum(games_lost_lengths)/len(games_lost_lengths)
-                game_average_length = sum(games_won_lengths+games_lost_lengths)/10
+                game_average_length = sum(games_won_lengths+games_lost_lengths)/N_TEST_RUNS
                 writer.add_scalar("Test episode win ratio", win_ratio, test_episode_count)
                 writer.add_scalar("Test episode won game average length", won_game_average_length, test_episode_count)
                 writer.add_scalar("Test episode lost game average length", lost_game_average_length, test_episode_count)
