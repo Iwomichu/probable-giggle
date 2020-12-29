@@ -18,7 +18,7 @@ from space_game.events.Event import Event
 
 def process_map(screen: Screen) -> np.ndarray:
     array_processed = np.array(Image.fromarray(screen.screen).convert('L').resize(size=(Config.scaled_height, Config.scaled_width)))
-    return array_processed
+    return np.expand_dims(array_processed, axis=-1)
 
 
 class AIController(EventEmitter, EventProcessor, Registrable):

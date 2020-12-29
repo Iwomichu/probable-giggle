@@ -21,7 +21,7 @@ GameLength = int
 
 
 def process_observation(observation: gym.spaces.Box) -> torch.Tensor:
-    tensor = torch.tensor(observation).transpose(0, 1).unsqueeze(0).to(device)
+    tensor = torch.tensor(observation).transpose(0, 2).to(device)
     if torch.cuda.is_available():
         return tensor.type(torch.cuda.FloatTensor)
     else:
