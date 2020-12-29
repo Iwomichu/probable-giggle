@@ -1,9 +1,11 @@
 from PIL import Image
 import numpy as np
-import pygame
+from abc import ABCMeta
 
 from space_game.Config import Config
 from space_game.Player import Player
+from space_game.Screen import Screen
+from space_game.domain_names import Side
 from space_game.events.EventEmitter import EventEmitter
 from space_game.events.EventProcessor import EventProcessor
 from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
@@ -14,14 +16,13 @@ from space_game.events.update_events.UpdateAIControllersEvent import UpdateAICon
 from space_game.events.Event import Event
 
 
-def process_map(window) -> np.ndarray:
-    array_raw = pygame.surfarray.array3d(window)
-    array_processed = np.array(Image.fromarray(array_raw).resize(size=(Config.scaled_height, Config.scaled_width)))
-    return array_processed
+def process_map(screen: Screen) -> np.ndarray:
+    array_processed = np.array(Image.fromarray(screen.screen).convert('L').resize(size=(Config.scaled_height, Config.scaled_width)))
+    return np.expand_dims(array_processed, axis=-1)
 
 
 class AIController(EventEmitter, EventProcessor, Registrable):
-    def __init__(self, event_manager: EventManager, config: Config, player: Player):
+    def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side, screen: Screen):
         super().__init__(event_manager)
         self.config = config
         self.lag = self.config.ai_input_lag
@@ -31,6 +32,7 @@ class AIController(EventEmitter, EventProcessor, Registrable):
             Event: lambda e: None
         }
         self.player = player
+        self.screen = screen
 
     def process_event(self, event: Event):
         if self.lag_count_left <= 0:
@@ -42,7 +44,7 @@ class AIController(EventEmitter, EventProcessor, Registrable):
         self.react()
 
     def get_current_map(self):
-        return process_map(self.config.window)
+        return process_map(self.screen)
 
     def react(self):
         """

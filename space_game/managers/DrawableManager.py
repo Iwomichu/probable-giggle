@@ -1,6 +1,7 @@
 from typing import Dict
 
 from space_game.Config import Config
+from space_game.Screen import Screen
 from space_game.events.creation_events.NewEventProcessorAddedEvent import NewEventProcessorAddedEvent
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
 from space_game.interfaces.Drawable import Drawable
@@ -13,11 +14,10 @@ from space_game.interfaces.Registrable import Registrable
 from space_game.managers.EventManager import EventManager
 from space_game.managers.ObjectsManager import objects_manager
 from space_game.events.update_events.UpdateDrawablesEvent import UpdateDrawablesEvent
-import pygame
 
 
 class DrawableManager(EventProcessor, Registrable):
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, screen: Screen):
         self.drawables: Dict[ObjectId, Drawable] = {}
         self.event_resolver = {
             NewDrawableAddedEvent: self.process_new_drawable_added_event,
@@ -26,6 +26,7 @@ class DrawableManager(EventProcessor, Registrable):
             Event: lambda e: None
         }
         self.config = config
+        self.screen = screen
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))
@@ -46,13 +47,10 @@ class DrawableManager(EventProcessor, Registrable):
     def update_drawables(self):
         self.redraw_window()
         for drawable in self.drawables.values():
-            drawable.draw(self.config.window)
-        pygame.display.update()
+            drawable.draw(self.screen)
 
     def process_update_drawables_event(self, event: Event):
         self.update_drawables()
 
     def redraw_window(self):
-        surface = pygame.Surface((self.config.width, self.config.height))
-        surface.fill(([0, 0, 0]))
-        self.config.window.blit(surface, (0, 0))
+        self.screen.reset_screen()

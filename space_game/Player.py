@@ -109,7 +109,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                         y=self.entity.y + (self.entity.height + 5 * self.config.scale if self.side == 1 else -5 * self.config.scale),
                         x_constraint=Constraint(0, self.config.width),
                         y_constraint=Constraint(0, self.config.height),
-                        vertical_velocity=self.config.bullet_velocity * (1. if self.side == 1 else -1.),
+                        vertical_velocity=self.config.bullet_velocity * (1 if self.side == 1 else -1),
                         horizontal_velocity=0,
                         width=self.config.bullet_width,
                         height=self.config.bullet_height,
@@ -118,7 +118,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
                             if self.side == 1
                             else self.config.player_2_bullet_color
                         ),
-                        acceleration=0.,
+                        acceleration=0,
                         respect_constraints=False,
                         max_velocity=self.config.max_velocity
                     ), 1, self.event_manager
@@ -170,12 +170,12 @@ def create_player(config: Config, entity: Entity, event_manager: EventManager, s
 
 def create_player_1(config: Config, event_manager: EventManager) -> Player:
     player_1_entity = Entity(
-        x=config.width / 2,
+        x=config.width // 2,
         y=100,
         x_constraint=config.player_1_width_constraint,
         y_constraint=config.player_1_height_constraint,
-        vertical_velocity=1.,
-        horizontal_velocity=0.,
+        vertical_velocity=1,
+        horizontal_velocity=0,
         width=config.player_size,
         height=config.player_size,
         color=config.player_1_color,
@@ -187,12 +187,12 @@ def create_player_1(config: Config, event_manager: EventManager) -> Player:
 
 def create_player_2(config: Config, event_manager: EventManager) -> Player:
     player_2_entity = Entity(
-        x=config.width / 2,
+        x=config.width // 2,
         y=config.height - 100,
         x_constraint=config.player_2_width_constraint,
         y_constraint=config.player_2_height_constraint,
-        vertical_velocity=-1.,
-        horizontal_velocity=0.,
+        vertical_velocity=-1,
+        horizontal_velocity=0,
         width=config.player_size,
         height=config.player_size,
         color=config.player_2_color,

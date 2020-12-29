@@ -1,16 +1,18 @@
 from random import randrange, choice
 
+from space_game.Screen import Screen
 from space_game.ai.AIAction import AIAction
 from space_game.ai.AIController import AIController
 from space_game.Config import Config
 from space_game.Player import Player
+from space_game.domain_names import Side
 from space_game.managers.EventManager import EventManager
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 
 
 class RandomAI(AIController):
-    def __init__(self, event_manager: EventManager, config: Config, player: Player):
-        super().__init__(event_manager, config, player)
+    def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side, screen: Screen):
+        super().__init__(event_manager, config, player, opponent, side, screen)
 
     def react(self):
         current_map = self.get_current_map()

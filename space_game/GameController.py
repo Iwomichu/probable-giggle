@@ -1,10 +1,12 @@
 from typing import List
+import pygame
 
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.Config import Config
 from space_game.InformationDisplay import InformationDisplay
 from space_game.KeyboardController import KeyboardController
 from space_game.Player import Player
+from space_game.Screen import Screen
 from space_game.ai.AIController import AIController
 from space_game.events.PlayerAcceleratedEvent import PlayerAcceleratedEvent
 from space_game.events.PlayerShootsEvent import PlayerShootsEvent
@@ -24,10 +26,14 @@ from space_game.managers.StatefulsManager import StatefulsManager
 
 
 class GameController:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, renderable: bool = False):
+        self.renderable = renderable
+        if renderable:
+            self.window = pygame.display.set_mode((config.width, config.height))
         self.config = config
+        self.screen = Screen(config.width, config.height, 3)
         self.event_manager = EventManager()
-        self.drawable_manager = DrawableManager(config)
+        self.drawable_manager = DrawableManager(config, self.screen)
         self.collision_manager = CollisionManager(event_manager=self.event_manager)
         self.movable_manager = MovableManager()
         self.stateful_manager = StatefulsManager()
@@ -47,6 +53,8 @@ class GameController:
         self.event_manager.add_event(UpdateAIControllersEvent())
 
         self.event_manager.process_events()
+        if self.renderable:
+            self.render_screen()
 
     def __add_player__(self, player: Player, keyboard_controller: KeyboardController = None) -> None:
         player.register(self.event_manager)
@@ -73,7 +81,8 @@ class GameController:
                 PlayerShootsEvent(id(player))
             )
         if len(self.players) >= 2:
-            self.__add_info__()
+            # self.__add_info__()
+            pass
 
     def __add_info__(self):
         player_1, player_2 = self.players[:2]
@@ -83,3 +92,8 @@ class GameController:
 
     def __add_ai_controller__(self, ai_controller: AIController):
         ai_controller.register(self.event_manager)
+
+    def render_screen(self) -> None:
+        surf = self.screen.convert_to_pygame_surface()
+        self.window.blit(surf, (0, 0))
+        pygame.display.update()

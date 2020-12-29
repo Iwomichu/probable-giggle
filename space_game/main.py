@@ -4,11 +4,8 @@ import pygame
 import pygame.locals
 import logging
 
-from stable_baselines3 import DQN
-
 from space_game.GameController import GameController
 from space_game.ai.DecisionBasedController import DecisionBasedController
-from space_game.ai.TFNaiveController import TFNaiveController
 from space_game.domain_names import Side
 from space_game.events.KeyPressedEvent import KeyPressedEvent
 from space_game.Config import Config
@@ -23,17 +20,24 @@ def main():
     running = True
     clock = pygame.time.Clock()
     config = Config()
-    game_controller = GameController(config)
+    game_controller = GameController(config, renderable=True)
     player_1, p1_controller = create_human_player_2(config, game_controller.event_manager)
     player_2 = create_player_1(config, game_controller.event_manager)
-    ai_2 = DecisionBasedController(game_controller.event_manager, config, player_2, player_1, Side.UP)
-    # ai_2 = TFNaiveController(game_controller.event_manager, config, player_2)
+    ai_2 = DecisionBasedController(
+        game_controller.event_manager,
+        config,
+        player_2,
+        player_1,
+        Side.UP,
+        game_controller.screen
+    )
     game_controller.__add_player__(player_2)
     game_controller.__add_player__(player_1, p1_controller)
     game_controller.__add_ai_controller__(ai_2)
-    screenshooter = Screenshooter(config, id(player_1), Path("../screenshots"))
+    screenshooter = Screenshooter(config, id(player_1), Path("../screenshots"), game_controller.screen)
     screenshooter.register(game_controller.event_manager)
     pressed_keys = {}
+
     while running:
         clock.tick(config.fps)
 
