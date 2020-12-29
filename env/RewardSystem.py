@@ -14,7 +14,7 @@ from space_game.managers.EventManager import EventManager
 
 
 class RewardSystem(EventProcessor, Registrable):
-    def __init__(self, game_config: Config, agent: Player):
+    def __init__(self, environment_config: SpaceGameEnvironmentConfig, game_config: Config, agent: Player):
         super().__init__()
         self.agent = agent
         self.event_resolver = {
@@ -25,6 +25,7 @@ class RewardSystem(EventProcessor, Registrable):
             Event: lambda e: None
         }
         self.game_config = game_config
+        self.environment_config = environment_config
         self.current_reward = 0.
         self.done = False
 
@@ -40,27 +41,25 @@ class RewardSystem(EventProcessor, Registrable):
 
     def process_damage_dealt_event(self, event: DamageDealtEvent):
         if event.damaged_id == id(self.agent):
-            self.current_reward += SpaceGameEnvironmentConfig.taken_damage_reward
+            self.current_reward += self.environment_config.taken_damage_reward
         else:
-            self.current_reward += SpaceGameEnvironmentConfig.target_hit_reward
+            self.current_reward += self.environment_config.target_hit_reward
 
     def process_player_destroyed_event(self, event: PlayerDestroyedEvent):
         if event.player_id == id(self.agent):
-            print("Agent lost!")
-            self.current_reward += SpaceGameEnvironmentConfig.game_lost_reward
+            self.current_reward += self.environment_config.game_lost_reward
         else:
-            print("Agent won!")
-            self.current_reward += SpaceGameEnvironmentConfig.game_won_reward
+            self.current_reward += self.environment_config.game_won_reward
         self.done = True
 
     def process_player_shoots_event(self, event: PlayerShootsEvent):
         if event.player_id == id(self.agent):
-            self.current_reward += SpaceGameEnvironmentConfig.shot_fired_reward
-        self.current_reward += SpaceGameEnvironmentConfig.shot_fired_reward
+            self.current_reward += self.environment_config.shot_fired_reward
+        self.current_reward += self.environment_config.shot_fired_reward
 
     def process_player_accelerated_event(self, event: PlayerAcceleratedEvent):
         if event.player_id == id(self.agent):
-            self.current_reward += SpaceGameEnvironmentConfig.action_taken_reward
+            self.current_reward += self.environment_config.action_taken_reward
 
     def get_reward_and_reset(self) -> float:
         reward = self.current_reward

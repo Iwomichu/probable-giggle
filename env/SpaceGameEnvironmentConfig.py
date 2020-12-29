@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 
+from space_game.ai.AIController import AIController
 from space_game.ai.RandomAI import RandomAI
-from space_game.ai.AlwaysShootingAI import AlwaysShootingAI
 
 
 @dataclass()
 class SpaceGameEnvironmentConfig:
-    OpponentControllerType = RandomAI
+    render: bool = False
+    OpponentControllerType: AIController = RandomAI
     step_reward: float = 0.
     target_hit_reward: float = 0.
     shot_fired_reward: float = 0
@@ -14,4 +15,5 @@ class SpaceGameEnvironmentConfig:
     game_lost_reward: float = -40.
     game_won_reward: float = 40.
     action_taken_reward: float = 0
-    max_steps: float = 1500
+    max_steps: float = float("inf")
+    step_delay: int = 5
