@@ -55,7 +55,6 @@ class RewardSystem(EventProcessor, Registrable):
     def process_player_shoots_event(self, event: PlayerShootsEvent):
         if event.player_id == id(self.agent):
             self.current_reward += self.environment_config.shot_fired_reward
-        self.current_reward += self.environment_config.shot_fired_reward
 
     def process_player_accelerated_event(self, event: PlayerAcceleratedEvent):
         if event.player_id == id(self.agent):
