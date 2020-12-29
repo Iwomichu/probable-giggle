@@ -6,7 +6,7 @@ import random
 import gym
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import namedtuple
+from collections import namedtuple, deque
 from torch import optim
 from torch.utils.tensorboard.writer import SummaryWriter
 
@@ -21,7 +21,7 @@ GameLength = int
 
 
 def process_observation(observation: gym.spaces.Box) -> torch.Tensor:
-    tensor = torch.tensor(observation).transpose(2, 0).unsqueeze(0).to(device)
+    tensor = torch.tensor(observation).transpose(0, 1).unsqueeze(0).to(device)
     if torch.cuda.is_available():
         return tensor.type(torch.cuda.FloatTensor)
     else:
@@ -50,7 +50,7 @@ class ReplayMemory(object):
 
 
 class DQN(nn.Module):
-    def __init__(self, weight, height, outputs):
+    def __init__(self, width, height, outputs):
         super(DQN, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
         self.bn1 = nn.BatchNorm2d(16)
@@ -62,7 +62,7 @@ class DQN(nn.Module):
         def conv2d_size_out(size, kernel_size=5, stride=2):
             return (size - (kernel_size - 1) - 1) // stride + 1
 
-        convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(weight)))
+        convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(width)))
         convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(height)))
         linear_input_size = convw * convh * 32
         self.head = nn.Linear(linear_input_size, outputs)
@@ -93,7 +93,7 @@ def main():
     )
     env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
     random_screen = process_observation(env.observation_space.sample())
-    _, _, screen_height, screen_width = random_screen.shape
+    _, screen_height, screen_width = random_screen.shape
     n_actions = env.action_space.n
     policy_net = DQN(screen_height, screen_width, n_actions).to(device)
     target_net = DQN(screen_height, screen_width, n_actions).to(device)
@@ -145,17 +145,27 @@ def main():
         optimizer.step()
 
     def test_run() -> Tuple[GameLength, HasAgentWon]:
-        previous_observation = process_observation(env.reset())
-        current_observation = previous_observation
+        last_screen = process_observation(env.reset())
+        current_screen = last_screen
         done = False
         game_length = 0
         info = {'agent_hp': float('inf')}
+        last_frame = current_screen - last_screen
+        history = deque([last_frame])
+        for _ in range(2):
+            observation, _, _, _ = env.step(0)
+            last_screen = current_screen
+            current_screen = process_observation(observation)
+            last_frame = current_screen - last_screen
+            history.append(last_frame)
+        state = torch.cat(tuple(history)).unsqueeze(0)
         while not done:
-            state = previous_observation - current_observation
             action = policy_net(state).max(1)[1].view(1, 1)
             observation, _, done, info = env.step(action.item())
-            previous_observation = current_observation
-            current_observation = process_observation(observation)
+            last_screen = current_screen
+            current_screen = process_observation(observation)
+            next_frame = current_screen - last_screen
+            state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
             game_length += 1
 
         return game_length, info['agent_hp'] > 0
@@ -167,8 +177,16 @@ def main():
         observation = env.reset()
         last_screen = process_observation(observation)
         current_screen = process_observation(observation)
-        state = current_screen - last_screen
+        last_frame = current_screen - last_screen
         cumulative_reward = 0.
+        history = deque([last_frame])
+        for _ in range(2):
+            observation, _, _, _ = env.step(0)
+            last_screen = current_screen
+            current_screen = process_observation(observation)
+            last_frame = current_screen - last_screen
+            history.append(last_frame)
+        state = torch.cat(tuple(history)).unsqueeze(0)
         for t in range(3000):
             action = select_action(state)
             observation, reward, done, info = env.step(action.item())
@@ -179,13 +197,16 @@ def main():
             last_screen = current_screen
             current_screen = process_observation(observation)
             if not done:
-                next_state = current_screen - last_screen
+                next_frame = current_screen - last_screen
+                next_state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)  # ':' at first index since it is squeeze dummy dimension
             else:
                 next_state = None
             memory.push(state, action, next_state, reward)
             state = next_state
             optimize_model()
             if done:
+                print(f"Episode {i_episode}")
+                print(info)
                 break
 
         writer.add_scalar("Episode reward", cumulative_reward, i_episode)
@@ -196,7 +217,7 @@ def main():
         # * average won game length
         # * average lost game length
         # * video of each game (this needs to be presented outside of TensorBoard)
-        if (i_episode+1) % 50 == 0:
+        if (i_episode+1) % 2 == 0:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []

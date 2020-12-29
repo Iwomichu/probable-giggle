@@ -53,7 +53,7 @@ class SpaceGameEnvironment(gym.Env):
 
         self.history = []
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
-        self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 3), dtype=uint8)
+        self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64), dtype=uint8)
 
     def reset(self):
         self.game_controller = GameController(self.game_config, self.renderable)
