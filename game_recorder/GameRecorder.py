@@ -5,7 +5,7 @@ import torch
 from typing import List
 
 from game_recorder.Frame import Frame
-from config import RECORDED_GAMES_DIRECTORY
+from constants import RECORDED_GAMES_DIRECTORY
 
 
 class GameRecorder:

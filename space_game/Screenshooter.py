@@ -6,7 +6,6 @@ from space_game.Screen import Screen
 from space_game.ai.AIAction import AIAction
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.Config import Config
-from space_game.ai.AIController import process_map
 from space_game.domain_names import ObjectId
 from space_game.events.Event import Event
 from space_game.events.creation_events.NewObjectCreatedEvent import NewObjectCreatedEvent
@@ -51,11 +50,11 @@ class Screenshooter(EventProcessor, Registrable):
             else:
                 action = AIAction.StandStill
 
-            screenshot = process_map(self.screen)
+            screenshot = self.screen.process_map()
             np.save(str(self.screen_saving_path.absolute() / str(int(time()))), (screenshot, action))
 
     def process_player_shoots(self, event: PlayerShootsEvent):
         if event.player_id == self.player_id:
-            screenshot = process_map(self.screen)
+            screenshot = self.screen.process_map()
             np.save(str(self.screen_saving_path.absolute() / str(int(time()))), (screenshot, AIAction.Shoot))
 

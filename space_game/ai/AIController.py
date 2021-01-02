@@ -1,7 +1,3 @@
-from PIL import Image
-import numpy as np
-from abc import ABCMeta
-
 from space_game.Config import Config
 from space_game.Player import Player
 from space_game.Screen import Screen
@@ -14,11 +10,6 @@ from space_game.interfaces.Registrable import Registrable
 from space_game.managers.EventManager import EventManager
 from space_game.events.update_events.UpdateAIControllersEvent import UpdateAIControllersEvent
 from space_game.events.Event import Event
-
-
-def process_map(screen: Screen) -> np.ndarray:
-    array_processed = np.array(Image.fromarray(screen.screen).convert('L').resize(size=(Config.scaled_height, Config.scaled_width)))
-    return np.expand_dims(array_processed, axis=-1)
 
 
 class AIController(EventEmitter, EventProcessor, Registrable):

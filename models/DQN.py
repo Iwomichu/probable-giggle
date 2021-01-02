@@ -15,7 +15,7 @@ from env import SpaceGameGymAPIEnvironment
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.DecisionBasedController import DecisionBasedController
 from game_recorder.GameRecorder import GameRecorder
-from config import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY
+from constants import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
