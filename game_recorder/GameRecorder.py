@@ -43,7 +43,6 @@ class GameRecorder:
 
     def save_recording(self) -> None:
         fps = 20
-        print(str(self.filepath.absolute()))
         out = cv2.VideoWriter(str(self.filepath.absolute()), cv2.VideoWriter_fourcc(*'mp4v'), fps, (self.width, self.height), not self.grayscale)
         for frame in self.frames:
             for i in range(frame.duration):
