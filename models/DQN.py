@@ -97,6 +97,7 @@ def main():
         step_reward=-.01,
         target_hit_reward=10,
         taken_damage_reward=-10,
+        shot_fired_reward=-10
     )
     env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
     random_screen = process_observation(env.observation_space.sample())

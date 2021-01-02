@@ -54,6 +54,9 @@ class RewardSystem(EventProcessor, Registrable):
 
     def process_player_shoots_event(self, event: PlayerShootsEvent):
         if event.player_id == id(self.agent):
+            if self.agent.shoot_countdown:
+                print("shot fired on cooldown")
+                self.current_reward += self.environment_config.shot_fired_when_on_cooldown_reward
             self.current_reward += self.environment_config.shot_fired_reward
 
     def process_player_accelerated_event(self, event: PlayerAcceleratedEvent):
