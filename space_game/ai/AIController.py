@@ -35,7 +35,7 @@ class AIController(EventEmitter, EventProcessor, Registrable):
         self.react()
 
     def get_current_map(self):
-        return process_map(self.screen)
+        return self.screen.process_map()
 
     def react(self):
         """

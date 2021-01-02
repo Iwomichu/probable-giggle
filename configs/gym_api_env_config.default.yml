@@ -1,0 +1,13 @@
+render: true
+opponent_controller_type: "RandomAI"
+reward:
+  step: 0
+  target_hit: 10
+  shot_fired: 0
+  taken_damage: -10
+  game_lost: 0
+  game_won: 0
+  action_taken: 0
+  shot_fired_when_on_cooldown: 0
+max_steps: .inf
+step_delay: 5

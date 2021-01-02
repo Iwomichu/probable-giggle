@@ -91,14 +91,15 @@ def main():
     EPS_DECAY = 200
     TARGET_UPDATE = 10
     N_TEST_RUNS = 20
-    env_config = SpaceGameEnvironmentConfig(
-        render=False,
-        OpponentControllerType=DecisionBasedController,
-        step_reward=-.01,
-        target_hit_reward=10,
-        taken_damage_reward=-10,
-        shot_fired_reward=-10
-    )
+    # env_config = SpaceGameEnvironmentConfig(
+    #     render=False,
+    #     OpponentControllerType=DecisionBasedController,
+    #     step_reward=-.01,
+    #     target_hit_reward=10,
+    #     taken_damage_reward=-10,
+    #     shot_fired_reward=-10
+    # )
+    env_config = SpaceGameEnvironmentConfig.default()
     env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
     random_screen = process_observation(env.observation_space.sample())
     _, screen_height, screen_width = random_screen.shape
