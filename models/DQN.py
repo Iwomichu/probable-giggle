@@ -9,11 +9,13 @@ import torch.nn.functional as F
 from collections import namedtuple, deque
 from torch import optim
 from torch.utils.tensorboard.writer import SummaryWriter
+from datetime import datetime, timezone
 
 from env import SpaceGameGymAPIEnvironment
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.DecisionBasedController import DecisionBasedController
 from game_recorder.GameRecorder import GameRecorder
+from config import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -77,7 +79,10 @@ class DQN(nn.Module):
 
 def main():
 
-    writer = SummaryWriter()
+    train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+    logs_directory = TRAINING_LOGS_DIRECTORY / train_run_id
+    recordings_directory = RECORDED_GAMES_DIRECTORY / train_run_id
+    writer = SummaryWriter(log_dir=logs_directory)
 
     BATCH_SIZE = 128
     GAMMA = 0.999
@@ -146,7 +151,7 @@ def main():
             param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
-    def test_run() -> Tuple[GameLength, HasAgentWon]:
+    def test_run(run_id: int) -> Tuple[GameLength, HasAgentWon]:
         screen_raw = env.reset()
         last_screen = process_observation(screen_raw)
         current_screen = last_screen
@@ -157,8 +162,20 @@ def main():
         last_frame = current_screen - last_screen
         _, pov_screen_width, pov_screen_height = last_frame.shape
         history = deque([last_frame])
-        recorder = GameRecorder(raw_screen_width, raw_screen_height, grayscale=True, filename="../test.mp4")
-        recorder_pov = GameRecorder(pov_screen_width, pov_screen_height, grayscale=True, filename="../test_raw.mp4")
+        recorder = GameRecorder(
+            raw_screen_width,
+            raw_screen_height,
+            grayscale=True,
+            directory=recordings_directory,
+            filename=f"{test_episode_count}_{run_id}_raw"
+        )
+        recorder_pov = GameRecorder(
+            pov_screen_width,
+            pov_screen_height,
+            grayscale=True,
+            directory=recordings_directory,
+            filename=f"{test_episode_count}_{run_id}_pov"
+        )
         for _ in range(2):
             observation, _, _, _ = env.step(0)
             last_screen = current_screen
@@ -227,12 +244,12 @@ def main():
         # * average won game length
         # * average lost game length
         # * video of each game (this needs to be presented outside of TensorBoard)
-        if (i_episode+1) % 2 == 1:
+        if (i_episode+1) % 50 == 0:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []
                 for i_test_run in range(N_TEST_RUNS):
-                    game_length, has_won = test_run()
+                    game_length, has_won = test_run(i_test_run)
                     if has_won:
                         games_won_lengths.append(game_length)
                     else:
@@ -261,9 +278,8 @@ def main():
                 print("======================")
                 test_episode_count += 1
 
-
-
     print("STOP")
+
 
 if __name__ == "__main__":
     main()
