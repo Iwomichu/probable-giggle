@@ -9,10 +9,13 @@ import torch.nn.functional as F
 from collections import namedtuple, deque
 from torch import optim
 from torch.utils.tensorboard.writer import SummaryWriter
+from datetime import datetime, timezone
 
 from env import SpaceGameGymAPIEnvironment
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.DecisionBasedController import DecisionBasedController
+from game_recorder.GameRecorder import GameRecorder
+from config import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -76,7 +79,10 @@ class DQN(nn.Module):
 
 def main():
 
-    writer = SummaryWriter()
+    train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+    logs_directory = TRAINING_LOGS_DIRECTORY / train_run_id
+    recordings_directory = RECORDED_GAMES_DIRECTORY / train_run_id
+    writer = SummaryWriter(log_dir=logs_directory)
 
     BATCH_SIZE = 128
     GAMMA = 0.999
@@ -86,7 +92,7 @@ def main():
     TARGET_UPDATE = 10
     N_TEST_RUNS = 10
     env_config = SpaceGameEnvironmentConfig(
-        render=True,
+        render=False,
         OpponentControllerType=DecisionBasedController,
         step_reward=-.01,
         target_hit_reward=10,
@@ -145,19 +151,38 @@ def main():
             param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
-    def test_run() -> Tuple[GameLength, HasAgentWon]:
-        last_screen = process_observation(env.reset())
+    def test_run(run_id: int) -> Tuple[GameLength, HasAgentWon]:
+        screen_raw = env.reset()
+        last_screen = process_observation(screen_raw)
         current_screen = last_screen
+        raw_screen_width, raw_screen_height, _ = screen_raw.shape
         done = False
         game_length = 0
         info = {'agent_hp': float('inf')}
         last_frame = current_screen - last_screen
+        _, pov_screen_width, pov_screen_height = last_frame.shape
         history = deque([last_frame])
+        recorder = GameRecorder(
+            raw_screen_width,
+            raw_screen_height,
+            grayscale=True,
+            directory=recordings_directory,
+            filename=f"{test_episode_count}_{run_id}_raw"
+        )
+        recorder_pov = GameRecorder(
+            pov_screen_width,
+            pov_screen_height,
+            grayscale=True,
+            directory=recordings_directory,
+            filename=f"{test_episode_count}_{run_id}_pov"
+        )
         for _ in range(2):
             observation, _, _, _ = env.step(0)
             last_screen = current_screen
             current_screen = process_observation(observation)
+            recorder.add_torch_frame(current_screen)
             last_frame = current_screen - last_screen
+            recorder_pov.add_torch_frame(last_frame)
             history.append(last_frame)
         state = torch.cat(tuple(history)).unsqueeze(0)
         while not done:
@@ -165,10 +190,13 @@ def main():
             observation, _, done, info = env.step(action.item())
             last_screen = current_screen
             current_screen = process_observation(observation)
+            recorder.add_torch_frame(current_screen)
             next_frame = current_screen - last_screen
+            recorder_pov.add_torch_frame(next_frame)
             state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
             game_length += 1
-
+        recorder.save_recording()
+        recorder_pov.save_recording()
         return game_length, info['agent_hp'] > 0
 
     # Training loop
@@ -221,7 +249,7 @@ def main():
                 games_won_lengths = []
                 games_lost_lengths = []
                 for i_test_run in range(N_TEST_RUNS):
-                    game_length, has_won = test_run()
+                    game_length, has_won = test_run(i_test_run)
                     if has_won:
                         games_won_lengths.append(game_length)
                     else:
@@ -250,9 +278,8 @@ def main():
                 print("======================")
                 test_episode_count += 1
 
-
-
     print("STOP")
+
 
 if __name__ == "__main__":
     main()
