@@ -13,6 +13,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from env import SpaceGameGymAPIEnvironment
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.DecisionBasedController import DecisionBasedController
+from game_recorder.GameRecorder import GameRecorder
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -86,7 +87,7 @@ def main():
     TARGET_UPDATE = 10
     N_TEST_RUNS = 10
     env_config = SpaceGameEnvironmentConfig(
-        render=True,
+        render=False,
         OpponentControllerType=DecisionBasedController,
         step_reward=-.01,
         target_hit_reward=10,
@@ -146,18 +147,25 @@ def main():
         optimizer.step()
 
     def test_run() -> Tuple[GameLength, HasAgentWon]:
-        last_screen = process_observation(env.reset())
+        screen_raw = env.reset()
+        last_screen = process_observation(screen_raw)
         current_screen = last_screen
+        raw_screen_width, raw_screen_height, _ = screen_raw.shape
         done = False
         game_length = 0
         info = {'agent_hp': float('inf')}
         last_frame = current_screen - last_screen
+        _, pov_screen_width, pov_screen_height = last_frame.shape
         history = deque([last_frame])
+        recorder = GameRecorder(raw_screen_width, raw_screen_height, grayscale=True, filename="../test.mp4")
+        recorder_pov = GameRecorder(pov_screen_width, pov_screen_height, grayscale=True, filename="../test_raw.mp4")
         for _ in range(2):
             observation, _, _, _ = env.step(0)
             last_screen = current_screen
             current_screen = process_observation(observation)
+            recorder.add_torch_frame(current_screen)
             last_frame = current_screen - last_screen
+            recorder_pov.add_torch_frame(last_frame)
             history.append(last_frame)
         state = torch.cat(tuple(history)).unsqueeze(0)
         while not done:
@@ -165,10 +173,13 @@ def main():
             observation, _, done, info = env.step(action.item())
             last_screen = current_screen
             current_screen = process_observation(observation)
+            recorder.add_torch_frame(current_screen)
             next_frame = current_screen - last_screen
+            recorder_pov.add_torch_frame(next_frame)
             state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
             game_length += 1
-
+        recorder.save_recording()
+        recorder_pov.save_recording()
         return game_length, info['agent_hp'] > 0
 
     # Training loop
@@ -216,7 +227,7 @@ def main():
         # * average won game length
         # * average lost game length
         # * video of each game (this needs to be presented outside of TensorBoard)
-        if (i_episode+1) % 50 == 0:
+        if (i_episode+1) % 2 == 1:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []
