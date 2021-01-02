@@ -34,3 +34,4 @@ class Config:
     ai_input_lag = 0  # amount of frames AI has to wait to act
     scaled_width = 64
     scaled_height = 64
+    max_hitpoints = 5

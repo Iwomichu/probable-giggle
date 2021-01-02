@@ -17,3 +17,4 @@ class SpaceGameEnvironmentConfig:
     action_taken_reward: float = 0
     max_steps: float = float("inf")
     step_delay: int = 5
+    shot_fired_when_on_cooldown_reward: float = 0
