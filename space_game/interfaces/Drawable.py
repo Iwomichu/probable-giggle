@@ -1,6 +1,6 @@
-from typing import Any
+from space_game.Screen import Screen
 
 
 class Drawable:
-    def draw(self, window: Any):
+    def draw(self, screen: Screen):
         pass

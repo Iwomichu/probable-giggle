@@ -90,7 +90,7 @@ def main():
     EPS_END = 0.05
     EPS_DECAY = 200
     TARGET_UPDATE = 10
-    N_TEST_RUNS = 10
+    N_TEST_RUNS = 20
     env_config = SpaceGameEnvironmentConfig(
         render=False,
         OpponentControllerType=DecisionBasedController,
@@ -200,7 +200,7 @@ def main():
         return game_length, info['agent_hp'] > 0
 
     # Training loop
-    num_episodes = 3000
+    num_episodes = 1000
     test_episode_count = 0
     for i_episode in range(num_episodes):
         observation = env.reset()
@@ -244,7 +244,7 @@ def main():
         # * average won game length
         # * average lost game length
         # * video of each game (this needs to be presented outside of TensorBoard)
-        if (i_episode+1) % 50 == 0:
+        if (i_episode+1) % 100 == 0:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []

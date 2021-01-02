@@ -160,7 +160,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
 def create_player(config: Config, entity: Entity, event_manager: EventManager, side: int) -> Player:
     return Player(
         entity=entity,
-        hitpoints=5,
+        hitpoints=config.max_hitpoints,
         config=config,
         side=side,
         max_ammo=config.ammo_maximum,

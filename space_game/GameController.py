@@ -81,8 +81,7 @@ class GameController:
                 PlayerShootsEvent(id(player))
             )
         if len(self.players) >= 2:
-            # self.__add_info__()
-            pass
+            self.__add_info__()
 
     def __add_info__(self):
         player_1, player_2 = self.players[:2]
