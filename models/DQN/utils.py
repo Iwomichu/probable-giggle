@@ -224,9 +224,9 @@ def test_game(
         observation, _, _, _ = env.step(0)
         last_screen = current_screen
         current_screen = process_observation(observation)
-        recorder.add_torch_frame(current_screen)
+        recorder.add_torch_frame(current_screen.cpu())
         last_frame = current_screen - last_screen
-        recorder_pov.add_torch_frame(last_frame)
+        recorder_pov.add_torch_frame(last_frame.cpu())
         history.append(last_frame)
     state = torch.cat(tuple(history)).unsqueeze(0)
     while not done:
@@ -234,9 +234,9 @@ def test_game(
         observation, _, done, info = env.step(action.item())
         last_screen = current_screen
         current_screen = process_observation(observation)
-        recorder.add_torch_frame(current_screen)
+        recorder.add_torch_frame(current_screen.cpu())
         next_frame = current_screen - last_screen
-        recorder_pov.add_torch_frame(next_frame)
+        recorder_pov.add_torch_frame(next_frame.cpu())
         state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
         game_length += 1
     recorder.save_recording()
