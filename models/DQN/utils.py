@@ -43,13 +43,16 @@ def process_observation(observation: gym.spaces.Box) -> ProcessedObservation:
 def train(
         env: SpaceGameGymAPIEnvironment = None,
         dqn_config: Config = None,
-        custom_logs_directory: Path = None
+        custom_logs_directory: Path = None,
+        custom_recordings_directory: Path = None
 ):
     train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
-    logs_directory = TRAINING_LOGS_DIRECTORY / train_run_id
-    recordings_directory = custom_logs_directory \
-        if custom_logs_directory is not None \
+    recordings_directory = custom_recordings_directory \
+        if custom_recordings_directory is not None \
         else RECORDED_GAMES_DIRECTORY / train_run_id
+    logs_directory = custom_logs_directory \
+        if custom_logs_directory is not None \
+        else TRAINING_LOGS_DIRECTORY / train_run_id
     writer = SummaryWriter(log_dir=logs_directory)
 
     dqn_config = dqn_config if dqn_config is not None else Config.default()
