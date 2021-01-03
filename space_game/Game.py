@@ -17,10 +17,10 @@ from space_game.Screenshooter import Screenshooter
 logger = logging.getLogger()
 
 
-def game():
+def game(config: Config = None):
     running = True
     clock = pygame.time.Clock()
-    config = Config.default()
+    config = config if config is not None else Config.default()
     game_controller = GameController(config, renderable=True)
     player_1, p1_controller = create_human_player_2(config, game_controller.event_manager)
     player_2 = create_player_1(config, game_controller.event_manager)

@@ -6,3 +6,4 @@ eps:
   decay: 200
 epoch_duration: 100
 n_test_runs: 20
+is_state_based_on_change: false

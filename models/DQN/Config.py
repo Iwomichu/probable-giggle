@@ -15,6 +15,7 @@ class Config:
     eps_decay: int
     epoch_duration: int
     n_test_runs: int
+    is_state_based_on_change: bool
 
     @staticmethod
     def from_config_dict(config_dict: dict):
@@ -25,7 +26,8 @@ class Config:
             n_test_runs=config_dict['n_test_runs'],
             eps_start=config_dict['eps']['start'],
             eps_end=config_dict['eps']['end'],
-            eps_decay=config_dict['eps']['decay']
+            eps_decay=config_dict['eps']['decay'],
+            is_state_based_on_change=config_dict['is_state_based_on_change']
         )
 
     @staticmethod
