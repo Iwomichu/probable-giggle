@@ -1,0 +1,8 @@
+batch_size: 128
+gamma: 0.999
+eps:
+  start: 0.9
+  end: 0.05
+  decay: 200
+epoch_duration: 1
+n_test_runs: 1

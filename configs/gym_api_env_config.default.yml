@@ -1,5 +1,5 @@
 render: true
-opponent_controller_type: "RandomAI"
+opponent_controller_type: "DecisionBasedController"
 reward:
   step: 0
   target_hit: 10
