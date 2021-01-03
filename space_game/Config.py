@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 from yaml import safe_load, YAMLError
@@ -42,6 +43,16 @@ class Config:
     @staticmethod
     def default():
         with open(CONFIGS_DIRECTORY / "space_game_config.default.yml", 'r') as f:
+            try:
+                config_file = safe_load(f)
+                return Config.from_config_dict(config_file)
+            except YAMLError as exc:
+                print("space game config loading failed. stacktrace:")
+                print(exc)
+
+    @staticmethod
+    def custom(path: Path):
+        with open(path, 'r') as f:
             try:
                 config_file = safe_load(f)
                 return Config.from_config_dict(config_file)

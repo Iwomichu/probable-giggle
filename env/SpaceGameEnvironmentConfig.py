@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Type
 
 from yaml import safe_load, YAMLError
@@ -43,6 +44,16 @@ class SpaceGameEnvironmentConfig:
     @staticmethod
     def default():
         with open(CONFIGS_DIRECTORY / "gym_api_env_config.default.yml", 'r') as f:
+            try:
+                config_file = safe_load(f)
+                return SpaceGameEnvironmentConfig.from_config_dict(config_file)
+            except YAMLError as exc:
+                print("gym api env config loading failed. stacktrace:")
+                print(exc)
+
+    @staticmethod
+    def custom(path: Path):
+        with open(path, 'r') as f:
             try:
                 config_file = safe_load(f)
                 return SpaceGameEnvironmentConfig.from_config_dict(config_file)

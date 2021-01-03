@@ -40,16 +40,17 @@ def process_observation(observation: gym.spaces.Box) -> ProcessedObservation:
         return tensor.type(torch.FloatTensor)
 
 
-def train(config: Config = None):
+def train(env: SpaceGameGymAPIEnvironment = None, dqn_config: Config = None):
     train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     logs_directory = TRAINING_LOGS_DIRECTORY / train_run_id
     recordings_directory = RECORDED_GAMES_DIRECTORY / train_run_id
     writer = SummaryWriter(log_dir=logs_directory)
 
-    config = config if config is not None else Config.default()
+    dqn_config = dqn_config if dqn_config is not None else Config.default()
 
-    env_config = SpaceGameEnvironmentConfig.default()
-    env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
+    if env is None:
+        env_config = SpaceGameEnvironmentConfig.default()
+        env = SpaceGameGymAPIEnvironment.SpaceGameEnvironment(env_config)
 
     random_screen = process_observation(env.observation_space.sample())
     _, screen_height, screen_width = random_screen.shape
@@ -83,7 +84,7 @@ def train(config: Config = None):
         state = torch.cat(tuple(history)).unsqueeze(0)
         for t in range(3000):
             action = select_action(
-                config.eps_end, config.eps_start, config.eps_decay, policy_net, n_actions, state, steps_done
+                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net, n_actions, state, steps_done
             )
             action_parsed = EnvironmentAction(action.item())
             steps_done += 1
@@ -100,7 +101,7 @@ def train(config: Config = None):
                 next_state = None
             memory.push(state, action, next_state, reward)
             state = next_state
-            optimize_model(memory, config.batch_size, policy_net, target_net, config.gamma, optimizer)
+            optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
             if done:
                 print(f"Episode {i_episode}")
                 print(info)
@@ -109,18 +110,18 @@ def train(config: Config = None):
         writer.add_scalar("Episode reward", cumulative_reward, i_episode)
 
         # Testing phase
-        if (i_episode+1) % config.epoch_duration == 0:
+        if (i_episode+1) % dqn_config.epoch_duration == 0:
             with torch.no_grad():
                 games_won_lengths = []
                 games_lost_lengths = []
-                for i_test_run in range(config.n_test_runs):
+                for i_test_run in range(dqn_config.n_test_runs):
                     game_length, has_won = test_game(env, recordings_directory, test_episode_count, policy_net,
                                                      i_test_run)
                     if has_won:
                         games_won_lengths.append(game_length)
                     else:
                         games_lost_lengths.append(game_length)
-                win_ratio = len(games_won_lengths)/config.n_test_runs
+                win_ratio = len(games_won_lengths) / dqn_config.n_test_runs
                 if games_won_lengths:
                     won_game_average_length = sum(games_won_lengths)/len(games_won_lengths)
                 else:
@@ -129,7 +130,7 @@ def train(config: Config = None):
                     lost_game_average_length = sum(games_lost_lengths)/len(games_lost_lengths)
                 else:
                     lost_game_average_length = 0
-                game_average_length = sum(games_won_lengths+games_lost_lengths)/config.n_test_runs
+                game_average_length = sum(games_won_lengths+games_lost_lengths) / dqn_config.n_test_runs
                 writer.add_scalar("Test episode win ratio", win_ratio, test_episode_count)
                 writer.add_scalar("Test episode won game average length", won_game_average_length, test_episode_count)
                 writer.add_scalar("Test episode lost game average length", lost_game_average_length, test_episode_count)

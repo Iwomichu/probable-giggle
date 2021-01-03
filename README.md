@@ -13,3 +13,17 @@ Projekt jest realizowany w oparciu o język Python. Środowisko zostało stworzo
 
 * Michał Jurałowicz @Iwomichu
 * Jakub Zelek @Zeleczek1
+
+
+## Uruchamianie
+
+Customowe configi (wzorowane na tych z członem `default` nalezy umieszczac w folderze `configs`)
+
+#### Trenowanie customowego DQN
+
+```shell
+python cli.py train-custom-dqn
+```
+
+Help:
+`python cli.py train-custom-dqn --help`

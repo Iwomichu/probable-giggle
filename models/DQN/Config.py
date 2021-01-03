@@ -39,7 +39,7 @@ class Config:
                 print(exc)
 
     @staticmethod
-    def custom_config(path: Path):
+    def custom(path: Path):
         with open(path, 'r') as f:
             try:
                 config_file = safe_load(f)
