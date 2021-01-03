@@ -17,7 +17,7 @@ from space_game.Screenshooter import Screenshooter
 logger = logging.getLogger()
 
 
-def main():
+def game():
     running = True
     clock = pygame.time.Clock()
     config = Config.default()
@@ -57,7 +57,3 @@ def main():
 
     pygame.display.update()
     pygame.time.wait(5000)
-
-
-if __name__ == "__main__":
-    main()

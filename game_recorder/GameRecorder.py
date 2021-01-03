@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import cv2
 import torch
@@ -13,15 +15,14 @@ class GameRecorder:
             self,
             screen_width: int,
             screen_height: int,
-            grayscale: bool = False,
-            directory: str = "test",
-            filename: str = "test",
+            grayscale: bool,
+            directory_path: Path,
+            filename: str,
             frame_length: int = 1
     ):
         self.frames: List[Frame] = []
-        recordings_directory = RECORDED_GAMES_DIRECTORY / directory
-        recordings_directory.mkdir(exist_ok=True)
-        self.filepath = recordings_directory / f"{filename}.mp4"
+        directory_path.mkdir(exist_ok=True, parents=True)
+        self.filepath = directory_path / f"{filename}.mp4"
         self.frame_length = frame_length
         self.width = screen_width
         self.height = screen_height

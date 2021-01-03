@@ -40,10 +40,16 @@ def process_observation(observation: gym.spaces.Box) -> ProcessedObservation:
         return tensor.type(torch.FloatTensor)
 
 
-def train(env: SpaceGameGymAPIEnvironment = None, dqn_config: Config = None):
+def train(
+        env: SpaceGameGymAPIEnvironment = None,
+        dqn_config: Config = None,
+        custom_logs_directory: Path = None
+):
     train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     logs_directory = TRAINING_LOGS_DIRECTORY / train_run_id
-    recordings_directory = RECORDED_GAMES_DIRECTORY / train_run_id
+    recordings_directory = custom_logs_directory \
+        if custom_logs_directory is not None \
+        else RECORDED_GAMES_DIRECTORY / train_run_id
     writer = SummaryWriter(log_dir=logs_directory)
 
     dqn_config = dqn_config if dqn_config is not None else Config.default()
@@ -210,14 +216,14 @@ def test_game(
         raw_screen_width,
         raw_screen_height,
         grayscale=True,
-        directory=str(recordings_directory),
+        directory_path=recordings_directory,
         filename=f"{test_episode_count}_{run_id}_raw"
     )
     recorder_pov = GameRecorder(
         pov_screen_width,
         pov_screen_height,
         grayscale=True,
-        directory=str(recordings_directory),
+        directory_path=recordings_directory,
         filename=f"{test_episode_count}_{run_id}_pov"
     )
     for _ in range(2):
