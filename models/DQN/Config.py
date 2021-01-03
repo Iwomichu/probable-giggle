@@ -16,6 +16,8 @@ class Config:
     epoch_duration: int
     n_test_runs: int
     is_state_based_on_change: bool
+    memory_size: int
+    target_update: int
 
     @staticmethod
     def from_config_dict(config_dict: dict):
@@ -27,7 +29,9 @@ class Config:
             eps_start=config_dict['eps']['start'],
             eps_end=config_dict['eps']['end'],
             eps_decay=config_dict['eps']['decay'],
-            is_state_based_on_change=config_dict['is_state_based_on_change']
+            is_state_based_on_change=config_dict['is_state_based_on_change'],
+            target_update=config_dict['target_update'],
+            memory_size=config_dict['memory_size']
         )
 
     @staticmethod

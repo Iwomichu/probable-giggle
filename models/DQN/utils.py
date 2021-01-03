@@ -45,7 +45,7 @@ def train(
         dqn_config: Config = None,
         custom_logs_directory: Path = None,
         custom_recordings_directory: Path = None
-):
+) -> DQN:
     train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     recordings_directory = custom_recordings_directory \
         if custom_recordings_directory is not None \
@@ -70,7 +70,7 @@ def train(
     target_net.eval()
     optimizer = RMSprop(policy_net.parameters())
 
-    memory = ReplayMemory(10000)
+    memory = ReplayMemory(dqn_config.memory_size)
 
     steps_done = 0
 
@@ -81,14 +81,14 @@ def train(
         observation = env.reset()
         last_screen = process_observation(observation)
         current_screen = process_observation(observation)
-        last_frame = current_screen - last_screen
+        last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
         cumulative_reward = 0.
         history = deque([last_frame])
         for _ in range(2):
             observation, _, _, _ = env.step(EnvironmentAction.StandStill)
             last_screen = current_screen
             current_screen = process_observation(observation)
-            last_frame = current_screen - last_screen
+            last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
             history.append(last_frame)
         state = torch.cat(tuple(history)).unsqueeze(0)
         for t in range(3000):
@@ -103,7 +103,7 @@ def train(
             last_screen = current_screen
             current_screen = process_observation(observation)
             if not done:
-                next_frame = current_screen - last_screen
+                next_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
                 # ':' at first index since it is squeeze dummy dimension
                 next_state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
             else:
@@ -116,6 +116,9 @@ def train(
                 print(info)
                 break
 
+        if (i_episode + 1) % dqn_config.target_update == 0:
+            target_net.load_state_dict(policy_net.state_dict())
+
         writer.add_scalar("Episode reward", cumulative_reward, i_episode)
 
         # Testing phase
@@ -124,8 +127,8 @@ def train(
                 games_won_lengths = []
                 games_lost_lengths = []
                 for i_test_run in range(dqn_config.n_test_runs):
-                    game_length, has_won = test_game(env, recordings_directory, test_episode_count, policy_net,
-                                                     i_test_run)
+                    game_length, has_won = test_game(env, recordings_directory, test_episode_count, target_net,
+                                                     i_test_run, dqn_config)
                     if has_won:
                         games_won_lengths.append(game_length)
                     else:
@@ -155,6 +158,7 @@ def train(
                 test_episode_count += 1
 
     print("STOP")
+    return target_net
 
 
 def select_action(
@@ -203,7 +207,7 @@ def optimize_model(
 
 def test_game(
         env: gym.Env, recordings_directory: Path, test_episode_count: int,
-        policy_net: DQN, run_id: int
+        policy_net: DQN, run_id: int, dqn_config: Config
 ) -> Tuple[GameLength, HasAgentWon]:
     screen_raw = env.reset()
     last_screen = process_observation(screen_raw)
@@ -234,7 +238,7 @@ def test_game(
         last_screen = current_screen
         current_screen = process_observation(observation)
         recorder.add_torch_frame(current_screen.cpu())
-        last_frame = current_screen - last_screen
+        last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
         recorder_pov.add_torch_frame(last_frame.cpu())
         history.append(last_frame)
     state = torch.cat(tuple(history)).unsqueeze(0)
@@ -244,7 +248,7 @@ def test_game(
         last_screen = current_screen
         current_screen = process_observation(observation)
         recorder.add_torch_frame(current_screen.cpu())
-        next_frame = current_screen - last_screen
+        next_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
         recorder_pov.add_torch_frame(next_frame.cpu())
         state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
         game_length += 1

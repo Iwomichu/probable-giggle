@@ -7,3 +7,5 @@ eps:
 epoch_duration: 100
 n_test_runs: 20
 is_state_based_on_change: false
+memory_size: 10000
+target_update: 10
