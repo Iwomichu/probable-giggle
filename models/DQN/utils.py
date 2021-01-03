@@ -75,9 +75,8 @@ def train(
     steps_done = 0
 
     # Training loop
-    num_episodes = 1000
     test_episode_count = 0
-    for i_episode in range(num_episodes):
+    for i_episode in range(dqn_config.games_total):
         observation = env.reset()
         last_screen = process_observation(observation)
         current_screen = process_observation(observation)
