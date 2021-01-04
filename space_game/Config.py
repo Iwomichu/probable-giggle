@@ -39,6 +39,7 @@ class Config:
     scaled_width: int
     scaled_height: int
     max_hitpoints: int
+    information_display_box_size: int
 
     @staticmethod
     def default():
@@ -87,7 +88,8 @@ class Config:
             player_1_bullet_color=tuple(config_dict['player_1']['bullet_color']),
             player_2_bullet_color=tuple(config_dict['player_2']['bullet_color']),
             player_1_color=tuple(config_dict['player_1']['color']),
-            player_2_color=tuple(config_dict['player_2']['color'])
+            player_2_color=tuple(config_dict['player_2']['color']),
+            information_display_box_size=config_dict['information_display_box_size']
         )
 
 
