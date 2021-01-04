@@ -27,7 +27,8 @@ class ObjectsManager(EventProcessor):
         self.objects[id(o)] = o
 
     def delete_by_id(self, o_id: ObjectId):
-        del self.objects[o_id]
+        if o_id in self.objects:
+            del self.objects[o_id]
 
     def process_event(self, event: Event):
         self.event_resolver.get(type(event))(event)

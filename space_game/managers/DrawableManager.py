@@ -42,7 +42,8 @@ class DrawableManager(EventProcessor, Registrable):
         self.drawables[event.drawable_id] = drawable
 
     def process_object_deleted_event(self, event: ObjectDeletedEvent):
-        del self.drawables[event.object_id]
+        if event.object_id in self.drawables:
+            del self.drawables[event.object_id]
 
     def update_drawables(self):
         self.redraw_window()

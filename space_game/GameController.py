@@ -1,5 +1,8 @@
 from typing import List
+
+import numpy as np
 import pygame
+from PIL import Image
 
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.Config import Config
@@ -31,7 +34,13 @@ class GameController:
         if renderable:
             self.window = pygame.display.set_mode((config.width, config.height))
         self.config = config
-        self.screen = Screen(config.width, config.height, 3)
+        self.screen = Screen(
+            width=config.width,
+            height=config.height,
+            n_channels=3,
+            scaled_width=config.scaled_width,
+            scaled_height=config.scaled_height
+        )
         self.event_manager = EventManager()
         self.drawable_manager = DrawableManager(config, self.screen)
         self.collision_manager = CollisionManager(event_manager=self.event_manager)

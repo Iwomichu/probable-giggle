@@ -41,7 +41,8 @@ class StatefulsManager(EventProcessor, Registrable):
         self.statefuls[event.stateful_id] = stateful
 
     def process_object_deleted_event(self, event: ObjectDeletedEvent):
-        del self.statefuls[event.object_id]
+        if event.object_id in self.statefuls:
+            del self.statefuls[event.object_id]
 
     def update_statefuls(self):
         for stateful in self.statefuls.values():

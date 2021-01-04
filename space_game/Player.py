@@ -106,7 +106,7 @@ class Player(Movable, Damagable, Collisable, EventEmitter, EventProcessor, Drawa
             bullet = Bullet(
                     Entity(
                         x=self.entity.x + self.entity.width // 2,
-                        y=self.entity.y + (self.entity.height + 5 * self.config.scale if self.side == 1 else -5 * self.config.scale),
+                        y=self.entity.y + (self.entity.height if self.side == 1 else -self.entity.height),
                         x_constraint=Constraint(0, self.config.width),
                         y_constraint=Constraint(0, self.config.height),
                         vertical_velocity=self.config.bullet_velocity * (1 if self.side == 1 else -1),

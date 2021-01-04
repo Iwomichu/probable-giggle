@@ -42,7 +42,8 @@ class CollisionManager(EventEmitter, EventProcessor, Registrable):
         self.collisables[event.collisable_id] = collisable
 
     def process_object_deleted_event(self, event: ObjectDeletedEvent):
-        del self.collisables[event.object_id]
+        if event.object_id in self.collisables:
+            del self.collisables[event.object_id]
 
     def process_check_collisions_event(self, event: CheckCollisionsEvent):
         self.check_collisions()

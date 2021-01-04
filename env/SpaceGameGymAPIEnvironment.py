@@ -12,16 +12,17 @@ from space_game.ai.DecisionBasedController import DecisionBasedController
 from space_game.domain_names import Side
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
-from space_game.ai.AIController import process_map
 
 
 class SpaceGameEnvironment(gym.Env):
     def __init__(
             self,
             environment_config: SpaceGameEnvironmentConfig = SpaceGameEnvironmentConfig(),
-            game_config: Config = Config()
+            game_config: Config = None
     ):
         super(SpaceGameEnvironment, self).__init__()
+        if game_config is None:
+            game_config = Config.default()
         self.running = True
         self.game_config = game_config
         self.environment_config = environment_config
@@ -86,7 +87,7 @@ class SpaceGameEnvironment(gym.Env):
         self.game_controller.__add_player__(self.opponent)
         self.ai_2.register(self.game_controller.event_manager)
 
-        return process_map(self.game_controller.screen)
+        return self.game_controller.screen.process_map()
 
     def step(self, action: EnvironmentAction):
         if self.renderable:
@@ -106,7 +107,7 @@ class SpaceGameEnvironment(gym.Env):
             done = True
 
         info = {"agent_hp": self.agent.hitpoints, "opponent_hp": self.opponent.hitpoints}
-        return process_map(self.game_controller.screen), reward, done, info
+        return self.game_controller.screen.process_map(), reward, done, info
 
     def render(self, mode='human'):
         pass

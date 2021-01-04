@@ -35,10 +35,10 @@ class DecisionBasedController(AIController):
     def __init__(self, event_manager: EventManager, config: Config, player: Player, opponent: Player, side: Side, screen: Screen):
         super().__init__(event_manager, config, player, opponent, side, screen)
         self.opponent = opponent
-        self.interaction_margin = 10
+        self.interaction_margin = self.config.player_size
         self.side = side
-        self.reaction_distance = 200 if self.side == Side.UP else -200
-        self.critical_distance = 100 if self.side == Side.UP else -100
+        self.reaction_distance = self.config.player_size * 4 if self.side == Side.UP else -self.config.player_size * 4
+        self.critical_distance = self.config.player_size * 2 if self.side == Side.UP else -self.config.player_size * 2
         self.is_dodging = False
         self.is_following = True
         self.tracked_projectiles: Dict[ObjectId, Projectile] = {}

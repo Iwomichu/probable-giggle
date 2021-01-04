@@ -4,6 +4,7 @@ import pygame
 import pygame.locals
 import logging
 
+import constants
 from space_game.GameController import GameController
 from space_game.ai.DecisionBasedController import DecisionBasedController
 from space_game.domain_names import Side
@@ -16,10 +17,10 @@ from space_game.Screenshooter import Screenshooter
 logger = logging.getLogger()
 
 
-def main():
+def game(config: Config = None):
     running = True
     clock = pygame.time.Clock()
-    config = Config()
+    config = config if config is not None else Config.default()
     game_controller = GameController(config, renderable=True)
     player_1, p1_controller = create_human_player_2(config, game_controller.event_manager)
     player_2 = create_player_1(config, game_controller.event_manager)
@@ -34,7 +35,7 @@ def main():
     game_controller.__add_player__(player_2)
     game_controller.__add_player__(player_1, p1_controller)
     game_controller.__add_ai_controller__(ai_2)
-    screenshooter = Screenshooter(config, id(player_1), Path("../screenshots"), game_controller.screen)
+    screenshooter = Screenshooter(config, id(player_1), constants.SCREENSHOTS_DIRECTORY, game_controller.screen)
     screenshooter.register(game_controller.event_manager)
     pressed_keys = {}
 
@@ -56,7 +57,3 @@ def main():
 
     pygame.display.update()
     pygame.time.wait(5000)
-
-
-if __name__ == "__main__":
-    main()

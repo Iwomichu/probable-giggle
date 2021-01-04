@@ -6,12 +6,10 @@ from typing import Tuple
 from env.EnvironmentAction import EnvironmentActionToAIActionMapping, EnvironmentAction
 from env.RewardSystem import RewardSystem
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
-from space_game.GameController import GameController
+from space_game.GameController import GameController, process_map
 from space_game.Config import Config
 from space_game.Player import create_player_1, create_player_2
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
-from space_game.ai.AIController import process_map
-
 
 Reward = float
 Observation = np.ndarray

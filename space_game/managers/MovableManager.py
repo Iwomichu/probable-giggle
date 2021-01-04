@@ -38,7 +38,8 @@ class MovableManager(EventProcessor, Registrable):
         self.movables[event.movable_id] = movable
 
     def process_object_deleted_event(self, event: ObjectDeletedEvent):
-        del self.movables[event.object_id]
+        if event.object_id in self.movables:
+            del self.movables[event.object_id]
 
     def update_movables(self):
         for movable in self.movables.values():
