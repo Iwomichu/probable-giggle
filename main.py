@@ -1,13 +1,11 @@
-from space_game.Config import Config as GameConfig
-from space_game.Game import game
+# from space_game.Config import Config as GameConfig
+# from space_game.Game import game
+from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
+from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
+from models.DQN.self_play_training import train
 
 if __name__ == '__main__':
-    game_conf = GameConfig.default()
-    game_conf.player_size = 32
-    game_conf.bullet_width = 16
-    game_conf.bullet_height = 16
-    game_conf.ai_input_lag = 5
-    game_conf.max_velocity = 14
-    game_conf.bullet_velocity = 16
-
-    game(game_conf)
+    env_config = SpaceGameEnvironmentConfig.default()
+    env_config.render = True
+    env = SpaceGameSelfPlayEnvironment(environment_config=env_config)
+    train(env)
