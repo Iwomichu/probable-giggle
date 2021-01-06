@@ -162,6 +162,7 @@ def train(env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN, n_acti
 
 
 def save(dqn: DQN, directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
     torch.save(dqn, directory / "dqn.pt")
 
 

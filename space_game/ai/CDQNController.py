@@ -29,6 +29,7 @@ class CDQNController(AIController):
 
     def react(self):
         current_map = self.get_current_map()
-        choice, _ = self.dqn_wrapper.predict(current_map)
+        choice = self.dqn_wrapper.predict(current_map)
+
         for event in AIActionToEventMapping[choice](id(self.player)):
             self.event_manager.add_event(event)
