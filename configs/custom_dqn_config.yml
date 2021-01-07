@@ -7,6 +7,6 @@ eps:
 epoch_duration: 500
 n_test_runs: 100
 is_state_based_on_change: false
-memory_size: 200000
+memory_size: 100000
 target_update: 10
 games_total: 10000
