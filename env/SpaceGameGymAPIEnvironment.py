@@ -1,5 +1,4 @@
 import gym
-import pygame
 from numpy import uint8
 
 from env.EnvironmentAction import EnvironmentActionToAIActionMapping

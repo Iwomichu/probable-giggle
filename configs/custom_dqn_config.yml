@@ -1,8 +1,12 @@
-batch_size: 128
+batch_size: 256
 gamma: 0.999
 eps:
   start: 0.9
   end: 0.05
-  decay: 200
-epoch_duration: 1
-n_test_runs: 1
+  decay: 160000
+epoch_duration: 100
+n_test_runs: 100
+is_state_based_on_change: false
+memory_size: 32000
+target_update: 25
+games_total: 2800

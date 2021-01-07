@@ -1,13 +1,23 @@
-from space_game.Config import Config as GameConfig
-from space_game.Game import game
+import torch
+
+# from space_game.Config import Config as GameConfig
+# from space_game.Game import game
+from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
+from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
+from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
+from models.DQN.self_play_training import train
+from models.DQN.Config import Config as DQNConfig
+
+
+def self_play_dqn_training():
+    env_config = SpaceGameEnvironmentConfig.default()
+    env_config.render = False
+    env = SpaceGameSelfPlayEnvironment(environment_config=env_config)
+    dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "custom_dqn_config.yml")
+    trained_model = train(env=env, dqn_config=dqn_config)
+    saving_path = SAVED_MODELS_DIRECTORY / "selfplay_dqn.pt"
+    torch.save(trained_model, saving_path)
+
 
 if __name__ == '__main__':
-    game_conf = GameConfig.default()
-    game_conf.player_size = 32
-    game_conf.bullet_width = 16
-    game_conf.bullet_height = 16
-    game_conf.ai_input_lag = 5
-    game_conf.max_velocity = 14
-    game_conf.bullet_velocity = 16
-
-    game(game_conf)
+    self_play_dqn_training()
