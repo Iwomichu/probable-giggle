@@ -133,8 +133,8 @@ def train(
             else:
                 next_state_up = None
                 next_state_down = None
-            memory.push(state_up, action_up, next_state_up, reward_up)
-            memory.push(state_down, action_down, next_state_down, reward_down)
+            memory.push(state_up.cpu(), action_up, next_state_up.cpu() if next_state_up is not None else None, reward_up)
+            memory.push(state_down.cpu(), action_down, next_state_down.cpu() if next_state_down is not None else None, reward_down)
             state_up = next_state_up
             state_down = next_state_down
             optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
@@ -191,7 +191,7 @@ def optimize_model(
 ) -> None:
     if len(memory) < batch_size:
         return
-    transitions = memory.sample(batch_size)
+    transitions = memory.sample(batch_size, device)
     batch = Transition(*zip(*transitions))
     non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                             batch.next_state)), device=device, dtype=torch.bool)

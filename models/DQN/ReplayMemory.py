@@ -21,5 +21,7 @@ class ReplayMemory:
     def __len__(self):
         return len(self.memory)
 
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+    def sample(self, batch_size, device):
+        s = random.sample(self.memory, batch_size)
+        return [Transition(state.to(device), action, next_state.to(device) if next_state is not None else None, reward)
+                for state, action, next_state, reward in s]

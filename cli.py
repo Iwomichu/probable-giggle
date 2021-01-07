@@ -8,7 +8,7 @@ from constants import CONFIGS_DIRECTORY
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from models.DQN.Config import Config as DQNConfig
-from models.DQN.utils import train_model
+from models.DQN.single_agent_training import train_model
 
 
 @click.group()

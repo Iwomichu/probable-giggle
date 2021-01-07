@@ -146,7 +146,7 @@ def train(env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN, n_acti
             next_state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
         else:
             next_state = None
-        memory.push(state, action, next_state, reward)
+        memory.push(state.cpu(), action, next_state.cpu() if next_state is not None else None, reward)
         state = next_state
         optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
         if done:
@@ -185,7 +185,7 @@ def optimize_model(
 ) -> None:
     if len(memory) < batch_size:
         return
-    transitions = memory.sample(batch_size)
+    transitions = memory.sample(batch_size, device)
     batch = Transition(*zip(*transitions))
     non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                             batch.next_state)), device=device, dtype=torch.bool)
