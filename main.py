@@ -36,7 +36,7 @@ def space_game_with_c_dqn():
     p2, p2_controller = create_human_player_2(game_config, game.game_controller.event_manager)
     c_dqn_controller = CDQNController(game.game_controller.event_manager, game_config,
                                       p1, p2, Side.UP, game.game_controller.screen,
-                                      dqn_path=SAVED_MODELS_DIRECTORY / "CustomDQN_19-02-09_06-01-2021" / "dqn.pt")
+                                      dqn_path=SAVED_MODELS_DIRECTORY / "CustomDQN_09-16-16_07-01-2021" / "dqn.pt")
     game.add_player_1(PlayerTuple(p1, None, c_dqn_controller))
     game.add_player_2(PlayerTuple(p2, p2_controller, None))
     game.start()
@@ -51,5 +51,4 @@ def self_play_dqn_training():
 
 
 if __name__ == '__main__':
-    self_play_dqn_training()
     space_game_with_c_dqn()
