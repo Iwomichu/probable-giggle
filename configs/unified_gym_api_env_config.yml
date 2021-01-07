@@ -1,0 +1,14 @@
+render: false
+opponent_controller_type: "DecisionBasedController"
+reward:
+  step: 0
+  target_hit: 1
+  shot_fired: 0
+  taken_damage: -1
+  game_lost: 0
+  game_won: 0
+  action_taken: 0
+  shot_fired_when_on_cooldown: 0
+max_steps: .inf
+step_delay: 5
+use_simplified_environment_actions: false

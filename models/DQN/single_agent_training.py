@@ -32,9 +32,12 @@ def train_model(
         dqn_config: Config = None,
         custom_logs_directory: Path = None,
         custom_recordings_directory: Path = None,
-        save_models_directory: Path = None
+        save_models_directory: Path = None,
+        custom_train_run_id: str = None
 ) -> DQN:
-    train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+    train_run_id = custom_train_run_id \
+        if custom_train_run_id \
+        else f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     recordings_directory = custom_recordings_directory \
         if custom_recordings_directory is not None \
         else RECORDED_GAMES_DIRECTORY / train_run_id
