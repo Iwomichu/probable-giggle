@@ -3,10 +3,10 @@ gamma: 0.999
 eps:
   start: 0.9
   end: 0.05
-  decay: 160000
-epoch_duration: 100
-n_test_runs: 100
+  decay: 1600
+epoch_duration: 14
+n_test_runs: 10
 is_state_based_on_change: false
-memory_size: 32000
-target_update: 25
-games_total: 2800
+memory_size: 3200
+target_update: 7
+games_total: 28
