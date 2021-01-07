@@ -14,6 +14,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from datetime import datetime, timezone
 from copy import deepcopy
 
+from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
 from env.EnvironmentAction import EnvironmentAction
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
@@ -21,7 +22,7 @@ from models.DQN.Config import Config
 from models.DQN.DQN import DQN
 from models.DQN.ReplayMemory import ReplayMemory
 from game_recorder.GameRecorder import GameRecorder
-from constants import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY
+from constants import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY, SAVED_MODELS_DIRECTORY
 from models.DQN.Transition import Transition
 from models.DQN.domain_types import HasAgentWon, GameLength, ProcessedObservation, RawAction, State
 
@@ -56,6 +57,8 @@ def train(
     logs_directory = custom_logs_directory \
         if custom_logs_directory is not None \
         else TRAINING_LOGS_DIRECTORY / train_run_id
+    model_save_directory = SAVED_MODELS_DIRECTORY / train_run_id
+    model_save_directory.mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(log_dir=logs_directory)
 
     dqn_config = dqn_config if dqn_config is not None else Config.default()
@@ -76,7 +79,7 @@ def train(
     memory = ReplayMemory(dqn_config.memory_size)
 
     steps_done = 0
-
+    test_episode_count = 0
     # Training loop
     for i_episode in range(dqn_config.games_total):
         observation_up, observation_down = env.reset()
@@ -137,24 +140,35 @@ def train(
             optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
             if done_up or done_down:
                 print(f"Episode {i_episode}")
-                print(f"Player {'up' if done_up else 'down'}")
                 break
 
         if (i_episode + 1) % dqn_config.target_update == 0:
             target_net.load_state_dict(policy_net.state_dict())
 
         writer.add_scalar("Episode reward", cumulative_reward, i_episode)
-        if (i_episode + 1) % dqn_config.epoch_duration == 0 and visualize_test:
-            print("TEST")
+        if (i_episode + 1) % dqn_config.epoch_duration == 0:
+            print("test_episode: ", test_episode_count)
             env_config_copied = deepcopy(env.environment_config)
-            env_config_copied.render = True
+            env_config_copied.render = visualize_test
             game_config_copied = deepcopy(env.space_game_config)
-            test_env = SpaceGameSelfPlayEnvironment(game_config_copied, env_config_copied)
+            test_env = SpaceGameEnvironment(game_config=game_config_copied, environment_config=env_config_copied)
+            won_games = 0
+            game_durations = 0
             with torch.no_grad():
-                for _ in range(dqn_config.n_test_runs):
-                    test_run_2(test_env, dqn_config, target_net)
+                for run_id in range(dqn_config.n_test_runs):
+                    game_duration, has_won = test_game(env=test_env, dqn_config=dqn_config,
+                              policy_net=target_net, test_episode_count=test_episode_count,
+                              recordings_directory=recordings_directory, run_id=run_id)
+                    won_games += (1 if has_won else 0)
+                    game_durations += game_duration
+            writer.add_scalar("Test episode winratio", won_games/dqn_config.n_test_runs, test_episode_count)
+            writer.add_scalar("Test episode average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
+            print("win ratio: ", won_games/dqn_config.n_test_runs)
+            print("game length: ", game_durations/dqn_config.n_test_runs)
+            test_episode_count += 1
 
     print("STOP")
+    torch.save(target_net, model_save_directory / "dqn.pt")
     return target_net
 
 
