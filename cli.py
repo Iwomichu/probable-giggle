@@ -8,7 +8,7 @@ from constants import CONFIGS_DIRECTORY
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from models.DQN.Config import Config as DQNConfig
-from models.DQN.utils import train
+from models.DQN.utils import train_model
 
 
 @click.group()
@@ -26,7 +26,7 @@ def train_custom_dqn(game_config_file, env_config_file, dqn_config_file):
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / dqn_config_file)
 
     gym_api_env = SpaceGameEnvironment(game_config=space_game_config, environment_config=gym_api_env_config)
-    train(env=gym_api_env, dqn_config=dqn_config)
+    train_model(env=gym_api_env, dqn_config=dqn_config)
 
 
 if __name__ == '__main__':
