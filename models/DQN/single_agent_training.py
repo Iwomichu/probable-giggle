@@ -52,7 +52,7 @@ def train_model(
 
     random_screen = process_observation(env.observation_space.sample())
     _, screen_height, screen_width = random_screen.shape
-    n_actions = env.action_space.n
+    n_actions = env.get_n_actions()
     policy_net = DQN(screen_height, screen_width, n_actions).to(device)
     target_net = DQN(screen_height, screen_width, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())

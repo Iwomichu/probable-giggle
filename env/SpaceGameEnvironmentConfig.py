@@ -24,6 +24,7 @@ class SpaceGameEnvironmentConfig:
     max_steps: float = float("inf")
     step_delay: int = 5
     shot_fired_when_on_cooldown_reward: float = 0
+    use_simplified_environment_actions: bool = False
 
     @staticmethod
     def from_config_dict(config_dict: dict):
@@ -39,6 +40,7 @@ class SpaceGameEnvironmentConfig:
             shot_fired_when_on_cooldown_reward=config_dict['reward']['shot_fired_when_on_cooldown'],
             taken_damage_reward=config_dict['reward']['taken_damage'],
             target_hit_reward=config_dict['reward']['target_hit'],
+            use_simplified_environment_actions=config_dict['use_simplified_environment_actions']
         )
 
     @staticmethod

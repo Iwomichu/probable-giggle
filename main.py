@@ -6,7 +6,7 @@ from space_game.ai.CDQNController import CDQNController
 from space_game.Config import Config
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
-from models.DQN.utils import train_model
+from models.DQN.single_agent_training import train_model
 from models.DQN.self_play_training import train
 from models.DQN.Config import Config as DQNConfig
 from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
@@ -51,4 +51,4 @@ def self_play_dqn_training():
 
 
 if __name__ == '__main__':
-    space_game_with_c_dqn()
+    train_dqn()

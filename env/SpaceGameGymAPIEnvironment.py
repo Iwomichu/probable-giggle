@@ -1,9 +1,12 @@
+from typing import Union
+
 import gym
 from numpy import uint8
 
 from env.EnvironmentAction import EnvironmentActionToAIActionMapping
 from env.EnvironmentAction import EnvironmentAction
 from env.RewardSystem import RewardSystem
+from env.SimplifiedEnvironmentAction import SimplifiedEnvironmentAction
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
@@ -25,6 +28,8 @@ class SpaceGameEnvironment(gym.Env):
         self.running = True
         self.game_config = game_config
         self.environment_config = environment_config
+        self.EnvironmentAction = SimplifiedEnvironmentAction \
+            if self.environment_config.use_simplified_environment_actions else EnvironmentAction
         self.renderable = environment_config.render
         self.game_controller = GameController(self.game_config, self.renderable)
         self.steps_left = SpaceGameEnvironmentConfig.max_steps
@@ -88,7 +93,7 @@ class SpaceGameEnvironment(gym.Env):
 
         return self.game_controller.screen.process_map()
 
-    def step(self, action: EnvironmentAction):
+    def step(self, action: Union[EnvironmentAction, SimplifiedEnvironmentAction]):
         if self.renderable:
             self.game_controller.render_screen()
         # AGENT CHOICE HANDLING
@@ -110,6 +115,9 @@ class SpaceGameEnvironment(gym.Env):
 
     def render(self, mode='human'):
         pass
+
+    def get_n_actions(self):
+        return len(self.EnvironmentAction)
 
 
 def main():

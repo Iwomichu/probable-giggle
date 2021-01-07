@@ -11,3 +11,4 @@ reward:
   shot_fired_when_on_cooldown: 0
 max_steps: .inf
 step_delay: 5
+use_simplified_environment_actions: false

@@ -69,7 +69,7 @@ def train(
 
     random_screen = process_observation_self_play(env.sample_observation_space())
     _, screen_height, screen_width = random_screen.shape
-    n_actions = SpaceGameSelfPlayEnvironment.get_n_actions()
+    n_actions = env.get_n_actions()
     policy_net = DQN(screen_height, screen_width, n_actions).to(device)
     target_net = DQN(screen_height, screen_width, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
