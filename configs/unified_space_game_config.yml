@@ -31,5 +31,5 @@ ammo:
   maximum: 20
   countdown: 80
 fps: 20
-information_display_box_size: 16
+information_display_box_size: 8
 
