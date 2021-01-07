@@ -2,9 +2,9 @@ render: true
 opponent_controller_type: "DecisionBasedController"
 reward:
   step: 0
-  target_hit: 10
+  target_hit: 1
   shot_fired: 0
-  taken_damage: -10
+  taken_damage: -1
   game_lost: 0
   game_won: 0
   action_taken: 0
