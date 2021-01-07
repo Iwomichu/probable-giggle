@@ -70,15 +70,15 @@ if __name__ == '__main__':
     env_config = SpaceGameEnvironmentConfig.custom(CONFIGS_DIRECTORY / "unified_gym_api_env_config.yml")
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "unified_dqn_config.yml")
     env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
-    gammas = [0.9, .95, .99, .999]
-    batch_sizes = [128, 256, 512]
-    eps_decays = [.05, .1, .2, .3]
+    gammas = [0.9, .95, .99]
+    batch_sizes = [256]
+    eps_decays = [.1, .3]
 
     for gamma in gammas:
         dqn_config.gamma = gamma
         for batch_size in batch_sizes:
             dqn_config.batch_size = batch_size
             for eps_decay in eps_decays:
-                dqn_config.eps_decay = eps_decay
+                dqn_config.eps_decay = eps_decay * dqn_config.games_total * 200
                 run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}"
                 train_model(env, dqn_config, custom_train_run_id=run_id)
