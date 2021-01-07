@@ -48,8 +48,9 @@ def train(
         dqn_config: Config = None,
         custom_logs_directory: Path = None,
         custom_recordings_directory: Path = None,
-        visualize_test: bool = False
-) -> DQN:
+        visualize_test: bool = False,
+        old_model: DQN = None
+) -> Tuple[DQN, DQN]:
     train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     recordings_directory = custom_recordings_directory \
         if custom_recordings_directory is not None \
@@ -70,11 +71,22 @@ def train(
     random_screen = process_observation_self_play(env.sample_observation_space())
     _, screen_height, screen_width = random_screen.shape
     n_actions = env.get_n_actions()
-    policy_net = DQN(screen_height, screen_width, n_actions).to(device)
-    target_net = DQN(screen_height, screen_width, n_actions).to(device)
-    target_net.load_state_dict(policy_net.state_dict())
-    target_net.eval()
-    optimizer = RMSprop(policy_net.parameters())
+
+    policy_net_up = DQN(screen_height, screen_width, n_actions).to(device)
+    target_net_up = DQN(screen_height, screen_width, n_actions).to(device)
+    if old_model is not None:
+        policy_net_up.load_state_dict(old_model.state_dict())
+    target_net_up.load_state_dict(policy_net_up.state_dict())
+    target_net_up.eval()
+    optimizer_up = RMSprop(policy_net_up.parameters())
+
+    policy_net_down = DQN(screen_height, screen_width, n_actions).to(device)
+    target_net_down = DQN(screen_height, screen_width, n_actions).to(device)
+    if old_model is not None:
+        policy_net_down.load_state_dict(old_model.state_dict())
+    target_net_down.load_state_dict(policy_net_down.state_dict())
+    target_net_down.eval()
+    optimizer_down = RMSprop(policy_net_down.parameters())
 
     memory = ReplayMemory(dqn_config.memory_size)
 
@@ -106,10 +118,10 @@ def train(
         state_down = torch.cat(tuple(history_down)).unsqueeze(0)
         for t in range(3000):
             action_up = select_action(
-                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net, n_actions, state_up, steps_done
+                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_up, n_actions, state_up, steps_done
             )
             action_down = select_action(
-                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net, n_actions, state_down, steps_done
+                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_down, n_actions, state_down, steps_done
             )
             action_parsed_up = EnvironmentAction(action_up.item())
             action_parsed_down = EnvironmentAction(action_down.item())
@@ -137,13 +149,15 @@ def train(
             memory.push(state_down.cpu(), action_down, next_state_down.cpu() if next_state_down is not None else None, reward_down)
             state_up = next_state_up
             state_down = next_state_down
-            optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
+            optimize_model(memory, dqn_config.batch_size, policy_net_up, target_net_up, dqn_config.gamma, optimizer_up)
+            optimize_model(memory, dqn_config.batch_size, policy_net_down, target_net_down, dqn_config.gamma, optimizer_down)
             if done_up or done_down:
                 print(f"Episode {i_episode}")
                 break
 
         if (i_episode + 1) % dqn_config.target_update == 0:
-            target_net.load_state_dict(policy_net.state_dict())
+            target_net_up.load_state_dict(policy_net_up.state_dict())
+            target_net_down.load_state_dict(policy_net_down.state_dict())
 
         writer.add_scalar("Episode reward", cumulative_reward, i_episode)
         if (i_episode + 1) % dqn_config.epoch_duration == 0:
@@ -157,19 +171,33 @@ def train(
             with torch.no_grad():
                 for run_id in range(dqn_config.n_test_runs):
                     game_duration, has_won = test_game(env=test_env, dqn_config=dqn_config,
-                              policy_net=target_net, test_episode_count=test_episode_count,
-                              recordings_directory=recordings_directory, run_id=run_id)
+                              policy_net=target_net_up, test_episode_count=test_episode_count,
+                              recordings_directory=recordings_directory, run_id=f"{run_id}_up")
                     won_games += (1 if has_won else 0)
                     game_durations += game_duration
-            writer.add_scalar("Test episode winratio", won_games/dqn_config.n_test_runs, test_episode_count)
-            writer.add_scalar("Test episode average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
-            print("win ratio: ", won_games/dqn_config.n_test_runs)
-            print("game length: ", game_durations/dqn_config.n_test_runs)
+            writer.add_scalar("Test episode upside winratio", won_games/dqn_config.n_test_runs, test_episode_count)
+            writer.add_scalar("Test episode upside average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
+            print("upside win ratio: ", won_games/dqn_config.n_test_runs)
+            print("upside game length: ", game_durations/dqn_config.n_test_runs)
+            won_games = 0
+            game_durations = 0
+            with torch.no_grad():
+                for run_id in range(dqn_config.n_test_runs):
+                    game_duration, has_won = test_game(env=test_env, dqn_config=dqn_config,
+                              policy_net=target_net_down, test_episode_count=test_episode_count,
+                              recordings_directory=recordings_directory, run_id=f"{run_id}_down")
+                    won_games += (1 if has_won else 0)
+                    game_durations += game_duration
+            writer.add_scalar("Test episode downside winratio", won_games/dqn_config.n_test_runs, test_episode_count)
+            writer.add_scalar("Test episode downside average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
+            print("downside win ratio: ", won_games/dqn_config.n_test_runs)
+            print("downside game length: ", game_durations/dqn_config.n_test_runs)
             test_episode_count += 1
 
     print("STOP")
-    torch.save(target_net, model_save_directory / "dqn.pt")
-    return target_net
+    torch.save(target_net_up, model_save_directory / "dqn_up.pt")
+    torch.save(target_net_down, model_save_directory / "dqn_down.pt")
+    return target_net_up, target_net_down
 
 
 def select_action(
@@ -218,7 +246,7 @@ def optimize_model(
 
 def test_game(
         env: gym.Env, recordings_directory: Path, test_episode_count: int,
-        policy_net: DQN, run_id: int, dqn_config: Config
+        policy_net: DQN, run_id: str, dqn_config: Config
 ) -> Tuple[GameLength, HasAgentWon]:
     screen_raw = env.reset()
     last_screen = process_observation_self_play(screen_raw)

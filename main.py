@@ -1,3 +1,5 @@
+from itertools import product
+
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
 from space_game.Game import Game
 from space_game.Player import create_human_player_2, create_player_1
@@ -50,5 +52,33 @@ def self_play_dqn_training():
     train(env=env, dqn_config=dqn_config)
 
 
+def dqn_train_scenario_1():
+    game_config = Config.custom(CONFIGS_DIRECTORY / "bigger_space_game_config.yml")
+    env_config = SpaceGameEnvironmentConfig.default()
+    env_config.render = False
+    env_config.use_simplified_environment_actions = True
+    dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "custom_dqn_config.yml")
+    single_agent_env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
+    model = train_model(single_agent_env, dqn_config)
+    dqn_config.games_total = 100
+    self_play_env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
+    train(env=self_play_env, dqn_config=dqn_config, old_model=model)
+
+
 if __name__ == '__main__':
-    train_dqn()
+    game_config = Config.custom(CONFIGS_DIRECTORY / "unified_space_game_config.yml")
+    env_config = SpaceGameEnvironmentConfig.custom(CONFIGS_DIRECTORY / "unified_gym_api_env_config.yml")
+    dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "unified_dqn_config.yml")
+    env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
+    gammas = [0.9, .95, .99, .999]
+    batch_sizes = [128, 256, 512]
+    eps_decays = [.05, .1, .2, .3]
+
+    for gamma in gammas:
+        dqn_config.gamma = gamma
+        for batch_size in batch_sizes:
+            dqn_config.batch_size = batch_size
+            for eps_decay in eps_decays:
+                dqn_config.eps_decay = eps_decay
+                run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}"
+                train_model(env, dqn_config, custom_train_run_id=run_id)
