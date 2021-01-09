@@ -4,9 +4,9 @@ eps:
   start: 0.9
   end: 0.05
   decay: 32000
-epoch_duration: 500
-n_test_runs: 100
+epoch_duration: 2
+n_test_runs: 5
 is_state_based_on_change: false
 memory_size: 100000
-target_update: 10
-games_total: 10000
+target_update: 2
+games_total: 5

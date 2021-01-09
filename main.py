@@ -71,7 +71,7 @@ if __name__ == '__main__':
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "unified_dqn_config.yml")
     env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
     gammas = [0.9, .95, .99]
-    batch_sizes = [256]
+    batch_sizes = [128]
     eps_decays = [.1, .3]
 
     for gamma in gammas:

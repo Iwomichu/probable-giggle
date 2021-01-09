@@ -1,3 +1,5 @@
+import math
+
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.Config import Config
 from space_game.Player import Player
@@ -14,7 +16,7 @@ from space_game.managers.EventManager import EventManager
 
 
 class RewardSystem(EventProcessor, Registrable):
-    def __init__(self, environment_config: SpaceGameEnvironmentConfig, game_config: Config, agent: Player):
+    def __init__(self, environment_config: SpaceGameEnvironmentConfig, game_config: Config, agent: Player, previously_done_steps = 0):
         super().__init__()
         self.agent = agent
         self.event_resolver = {
@@ -28,6 +30,11 @@ class RewardSystem(EventProcessor, Registrable):
         self.environment_config = environment_config
         self.current_reward = 0.
         self.done = False
+        self.steps = previously_done_steps
+
+    def get_value(self, start: float, done: float, decay: float):
+        time_frac = min(self.steps / decay, 1)
+        return start * (1 - time_frac) + done * time_frac
 
     def register(self, event_manager: EventManager):
         event_manager.add_event(NewObjectCreatedEvent(self))
@@ -41,15 +48,15 @@ class RewardSystem(EventProcessor, Registrable):
 
     def process_damage_dealt_event(self, event: DamageDealtEvent):
         if event.damaged_id == id(self.agent):
-            self.current_reward += self.environment_config.taken_damage_reward
+            self.current_reward += self.get_value(self.environment_config.taken_damage_reward_start, self.environment_config.taken_damage_reward_end, self.environment_config.taken_damage_reward_decay)
         else:
-            self.current_reward += self.environment_config.target_hit_reward
+            self.current_reward += self.get_value(self.environment_config.target_hit_reward_start, self.environment_config.target_hit_reward_end, self.environment_config.target_hit_reward_decay)
 
     def process_player_destroyed_event(self, event: PlayerDestroyedEvent):
         if event.player_id == id(self.agent):
-            self.current_reward += self.environment_config.game_lost_reward
+            self.current_reward += self.get_value(self.environment_config.game_lost_reward_start, self.environment_config.game_lost_reward_end, self.environment_config.game_lost_reward_decay)
         else:
-            self.current_reward += self.environment_config.game_won_reward
+            self.current_reward += self.get_value(self.environment_config.game_won_reward_start, self.environment_config.game_won_reward_end, self.environment_config.game_won_reward_decay)
         self.done = True
 
     def process_player_shoots_event(self, event: PlayerShootsEvent):
@@ -65,6 +72,7 @@ class RewardSystem(EventProcessor, Registrable):
     def get_reward_and_reset(self) -> float:
         reward = self.current_reward
         self.current_reward = 0.
+        self.steps += 1
         return reward
 
     def is_game_over(self):

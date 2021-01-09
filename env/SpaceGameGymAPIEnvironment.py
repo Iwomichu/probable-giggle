@@ -20,7 +20,8 @@ class SpaceGameEnvironment(gym.Env):
     def __init__(
             self,
             environment_config: SpaceGameEnvironmentConfig = SpaceGameEnvironmentConfig(),
-            game_config: Config = None
+            game_config: Config = None,
+            previously_done_steps=0
     ):
         super(SpaceGameEnvironment, self).__init__()
         if game_config is None:
@@ -40,7 +41,7 @@ class SpaceGameEnvironment(gym.Env):
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent)
-        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent)
+        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent, previously_done_steps)
         self.reward_system.register(self.game_controller.event_manager)
 
         # OPPONENT INITIALIZATION
@@ -61,7 +62,7 @@ class SpaceGameEnvironment(gym.Env):
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
         self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 1), dtype=uint8)
 
-    def reset(self):
+    def reset(self, previously_done_steps=0):
         self.game_controller = GameController(self.game_config, self.renderable)
 
         self.steps_left = self.environment_config.max_steps
@@ -72,7 +73,7 @@ class SpaceGameEnvironment(gym.Env):
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent)
-        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent)
+        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent, previously_done_steps)
         self.reward_system.register(self.game_controller.event_manager)
 
         # OPPONENT INITIALIZATION
