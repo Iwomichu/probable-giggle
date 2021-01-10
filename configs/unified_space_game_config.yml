@@ -4,18 +4,18 @@ player_1:
   color: [255, 0, 0]
   bullet_color: [255, 0, 0]
   base_size: 32
-  velocity: 14
+  velocity: 8
   max_hitpoints: 5
-  acceleration: 1
+  acceleration: 7
 player_2:
   x_constraint: [0, 400] # from 0 to width
   y_constraint: [225, 375]
-  color: [0, 0, 255]
-  bullet_color: [0, 0, 255]
+  color: [255, 0, 0]
+  bullet_color: [255, 0, 0]
   base_size: 32
-  velocity: 14
+  velocity: 8
   max_hitpoints: 5
-  acceleration: 1
+  acceleration: 7
 ai_input_lag: 5
 scale: 1
 base_width: 400
@@ -25,7 +25,7 @@ compressed_height: 64
 bullet:
   base_width: 16
   base_height: 16
-  velocity: 16
+  velocity: 20
 ammo:
   cooldown: 10
   maximum: 20

@@ -72,6 +72,10 @@ class SpaceGameEnvironmentConfig:
                 print(exc)
 
     @staticmethod
+    def unified():
+        return SpaceGameEnvironmentConfig.custom(CONFIGS_DIRECTORY / "unified_gym_api_env_config.yml")
+
+    @staticmethod
     def custom(path: Path):
         with open(path, 'r') as f:
             try:
