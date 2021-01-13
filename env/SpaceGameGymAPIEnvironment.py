@@ -120,6 +120,9 @@ class SpaceGameEnvironment(gym.Env):
     def get_n_actions(self):
         return len(self.EnvironmentAction)
 
+    def sample_observation_space(self):
+        return self.game_controller.screen.process_map()
+
 
 def main():
     from stable_baselines3.dqn.policies import CnnPolicy as Policy

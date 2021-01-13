@@ -5,20 +5,20 @@ reward:
   target_hit:
     start: 1
     end: 0
-    decay: 400000
+    decay: 64000
   shot_fired: 0
   taken_damage:
     start: -1
     end: 0
-    decay: 400000
+    decay: 64000
   game_lost:
     start: -1
     end: -10
-    decay: 400000
+    decay: 64000
   game_won:
     start: 1
     end: 10
-    decay: 400000
+    decay: 64000
   action_taken: 0
   shot_fired_when_on_cooldown: 0
 max_steps: .inf

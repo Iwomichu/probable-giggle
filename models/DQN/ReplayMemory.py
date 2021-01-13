@@ -15,13 +15,10 @@ class ReplayMemory:
         if len(self.memory) < self.capacity:
             self.memory.append(None)
         self.memory[self.position] = Transition(*args)
-        self.position += 1
-        self.position = self.position % self.capacity
+        self.position = (self.position + 1) % self.capacity
 
     def __len__(self):
         return len(self.memory)
 
     def sample(self, batch_size):
-        s = random.sample(self.memory, batch_size)
-        return [Transition(state, action, next_state, reward)
-                for state, action, next_state, reward in s]
+        return random.sample(self.memory, batch_size)

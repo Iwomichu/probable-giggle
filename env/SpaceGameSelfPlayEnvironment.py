@@ -89,7 +89,7 @@ class SpaceGameSelfPlayEnvironment:
 
         self.history = []
 
-    def reset(self) -> Tuple[Observation, Observation]:
+    def reset(self, previously_done_steps = 0) -> Tuple[Observation, Observation]:
         """
         Reload game internals
         :return: Map of newly created game
@@ -106,7 +106,7 @@ class SpaceGameSelfPlayEnvironment:
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent_1)
-        self.reward_system_1 = RewardSystem(self.environment_config, self.space_game_config, self.agent_1)
+        self.reward_system_1 = RewardSystem(self.environment_config, self.space_game_config, self.agent_1, previously_done_steps)
         self.reward_system_1.register(self.game_controller.event_manager)
 
         # DOWN SIDE INITIALIZATION

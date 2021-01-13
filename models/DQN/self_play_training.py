@@ -1,13 +1,10 @@
 import math
 import torch
 import random
-import gym
 import numpy as np
 
 from pathlib import Path
 from typing import Tuple
-from torch.nn.functional import smooth_l1_loss
-from collections import deque
 from torch.optim.optimizer import Optimizer
 from torch.optim.rmsprop import RMSprop
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -21,9 +18,9 @@ from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from models.DQN.Config import Config
 from models.DQN.DQN import DQN
 from models.DQN.ReplayMemory import ReplayMemory
+from models.DQN.single_agent_training import optimize_model
 from game_recorder.GameRecorder import GameRecorder
 from constants import RECORDED_GAMES_DIRECTORY, TRAINING_LOGS_DIRECTORY, SAVED_MODELS_DIRECTORY
-from models.DQN.Transition import Transition
 from models.DQN.domain_types import HasAgentWon, GameLength, ProcessedObservation, RawAction, State
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -36,14 +33,22 @@ def process_observation_self_play(observation: np.array) -> ProcessedObservation
     :param observation: Observation to be processed
     :return: Processed observation
     """
-    tensor = torch.tensor(observation.copy()).transpose(0, 2).to(device)
-    if torch.cuda.is_available():
-        return tensor.type(torch.cuda.FloatTensor)
-    else:
-        return tensor.type(torch.FloatTensor)
+    return torch.tensor(observation.copy()).transpose(0, 2)
 
 
-def train(
+def prepare_model(screen_height: int, screen_width: int,
+                  n_actions: int, old_model: DQN = None) -> Tuple[DQN, DQN, Optimizer]:
+    policy_net = DQN(screen_height, screen_width, n_actions).to(device)
+    target_net = DQN(screen_height, screen_width, n_actions).to(device)
+    if old_model is not None:
+        policy_net.load_state_dict(old_model.state_dict())
+    target_net.load_state_dict(policy_net.state_dict())
+    target_net.eval()
+    optimizer = RMSprop(policy_net.parameters())
+    return policy_net, target_net, optimizer
+
+
+def train_model(
         env: SpaceGameSelfPlayEnvironment = None,
         dqn_config: Config = None,
         custom_logs_directory: Path = None,
@@ -72,21 +77,8 @@ def train(
     _, screen_height, screen_width = random_screen.shape
     n_actions = env.get_n_actions()
 
-    policy_net_up = DQN(screen_height, screen_width, n_actions).to(device)
-    target_net_up = DQN(screen_height, screen_width, n_actions).to(device)
-    if old_model is not None:
-        policy_net_up.load_state_dict(old_model.state_dict())
-    target_net_up.load_state_dict(policy_net_up.state_dict())
-    target_net_up.eval()
-    optimizer_up = RMSprop(policy_net_up.parameters())
-
-    policy_net_down = DQN(screen_height, screen_width, n_actions).to(device)
-    target_net_down = DQN(screen_height, screen_width, n_actions).to(device)
-    if old_model is not None:
-        policy_net_down.load_state_dict(old_model.state_dict())
-    target_net_down.load_state_dict(policy_net_down.state_dict())
-    target_net_down.eval()
-    optimizer_down = RMSprop(policy_net_down.parameters())
+    policy_net_up, target_net_up, optimizer_up = prepare_model(screen_height, screen_width, n_actions, old_model)
+    policy_net_down, target_net_down, optimizer_down = prepare_model(screen_height, screen_width, n_actions, old_model)
 
     memory = ReplayMemory(dqn_config.memory_size)
 
@@ -94,109 +86,27 @@ def train(
     test_episode_count = 0
     # Training loop
     for i_episode in range(dqn_config.games_total):
-        observation_up, observation_down = env.reset()
-        last_screen_up, last_screen_down = process_observation_self_play(observation_up), process_observation_self_play(observation_down)
-        current_screen_up, current_screen_down = process_observation_self_play(observation_up), process_observation_self_play(observation_down)
-        last_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-        last_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-        cumulative_reward = 0.
-        history_up = deque([last_frame_up])
-        history_down = deque([last_frame_down])
-        for _ in range(2):
-            (_, observation_up, _), (_, observation_down, _) = env.step(
-                (EnvironmentAction.StandStill, EnvironmentAction.StandStill)
-            )
-            last_screen_up = current_screen_up
-            current_screen_up = process_observation_self_play(observation_up)
-            last_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-            history_up.append(last_frame_up)
-            last_screen_down = current_screen_down
-            current_screen_down = process_observation_self_play(observation_down)
-            last_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-            history_down.append(last_frame_down)
-        state_up = torch.cat(tuple(history_up)).unsqueeze(0)
-        state_down = torch.cat(tuple(history_down)).unsqueeze(0)
-        for t in range(3000):
-            action_up = select_action(
-                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_up, n_actions, state_up, steps_done
-            )
-            action_down = select_action(
-                dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_down, n_actions, state_down, steps_done
-            )
-            action_parsed_up = EnvironmentAction(action_up.item())
-            action_parsed_down = EnvironmentAction(action_down.item())
-            steps_done += 1
-            (reward_up, observation_up, done_up), (reward_down, observation_down, done_down) = env.step(
-                (action_parsed_up, action_parsed_down)
-            )
-            cumulative_reward += reward_up + reward_down
-            reward_up = torch.tensor([reward_up], device=device)
-            reward_down = torch.tensor([reward_down], device=device)
-            last_screen_up = current_screen_up
-            last_screen_down = current_screen_down
-            current_screen_up = process_observation_self_play(observation_up)
-            current_screen_down = process_observation_self_play(observation_down)
-            if not (done_up or done_down):
-                next_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-                next_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-                # ':' at first index since it is squeeze dummy dimension
-                next_state_up = torch.cat((state_up[:, 1:, :, :], next_frame_up.unsqueeze(0)), dim=1)
-                next_state_down = torch.cat((state_down[:, 1:, :, :], next_frame_down.unsqueeze(0)), dim=1)
-            else:
-                next_state_up = None
-                next_state_down = None
-            memory.push(state_up.cpu(), action_up, next_state_up.cpu() if next_state_up is not None else None, reward_up)
-            memory.push(state_down.cpu(), action_down, next_state_down.cpu() if next_state_down is not None else None, reward_down)
-            state_up = next_state_up
-            state_down = next_state_down
-            optimize_model(memory, dqn_config.batch_size, policy_net_up, target_net_up, dqn_config.gamma, optimizer_up)
-            optimize_model(memory, dqn_config.batch_size, policy_net_down, target_net_down, dqn_config.gamma, optimizer_down)
-            if done_up or done_down:
-                print(f"Episode {i_episode}")
-                break
-
+        steps_done = train(
+            env, n_actions, policy_net_up, target_net_up,
+            policy_net_down, target_net_down,
+            memory, optimizer_up, optimizer_down, dqn_config,
+            i_episode, recordings_directory, steps_done
+        )
         if (i_episode + 1) % dqn_config.target_update == 0:
             target_net_up.load_state_dict(policy_net_up.state_dict())
             target_net_down.load_state_dict(policy_net_down.state_dict())
+            torch.save(target_net_up, model_save_directory / "dqn_up.pt")
+            torch.save(target_net_down, model_save_directory / "dqn_down.pt")
 
-        writer.add_scalar("Episode reward", cumulative_reward, i_episode)
         if (i_episode + 1) % dqn_config.epoch_duration == 0:
-            print("test_episode: ", test_episode_count)
-            env_config_copied = deepcopy(env.environment_config)
-            env_config_copied.render = visualize_test
-            game_config_copied = deepcopy(env.space_game_config)
-            test_env = SpaceGameEnvironment(game_config=game_config_copied, environment_config=env_config_copied)
-            won_games = 0
-            game_durations = 0
-            with torch.no_grad():
-                for run_id in range(dqn_config.n_test_runs):
-                    game_duration, has_won = test_game(env=test_env, dqn_config=dqn_config,
-                              policy_net=target_net_up, test_episode_count=test_episode_count,
-                              recordings_directory=recordings_directory, run_id=f"{run_id}_up")
-                    won_games += (1 if has_won else 0)
-                    game_durations += game_duration
-            writer.add_scalar("Test episode upside winratio", won_games/dqn_config.n_test_runs, test_episode_count)
-            writer.add_scalar("Test episode upside average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
-            print("upside win ratio: ", won_games/dqn_config.n_test_runs)
-            print("upside game length: ", game_durations/dqn_config.n_test_runs)
-            won_games = 0
-            game_durations = 0
-            with torch.no_grad():
-                for run_id in range(dqn_config.n_test_runs):
-                    game_duration, has_won = test_game(env=test_env, dqn_config=dqn_config,
-                              policy_net=target_net_down, test_episode_count=test_episode_count,
-                              recordings_directory=recordings_directory, run_id=f"{run_id}_down")
-                    won_games += (1 if has_won else 0)
-                    game_durations += game_duration
-            writer.add_scalar("Test episode downside winratio", won_games/dqn_config.n_test_runs, test_episode_count)
-            writer.add_scalar("Test episode downside average game length", game_durations/dqn_config.n_test_runs, test_episode_count)
-            print("downside win ratio: ", won_games/dqn_config.n_test_runs)
-            print("downside game length: ", game_durations/dqn_config.n_test_runs)
+            test(
+                test_episode_count, env, dqn_config,
+                target_net_up, target_net_down,
+                recordings_directory, visualize_test, writer
+            )
             test_episode_count += 1
 
     print("STOP")
-    torch.save(target_net_up, model_save_directory / "dqn_up.pt")
-    torch.save(target_net_down, model_save_directory / "dqn_down.pt")
     return target_net_up, target_net_down
 
 
@@ -208,87 +118,208 @@ def select_action(
     eps_threshold = eps_done + (eps_start - eps_done) * math.exp(-1. * steps_done / eps_decay)
     if sample > eps_threshold:
         with torch.no_grad():
-            return policy_net(state).max(1)[1].view(1, 1)
+            return policy_net(state.to(device).float()).max(1)[1].view(1, 1)
     else:
         return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
 
-def optimize_model(
-        memory: ReplayMemory, batch_size: int,
-        policy_net: DQN, target_net: DQN, gamma: float, optimizer: Optimizer
-) -> None:
-    if len(memory) < batch_size:
-        return
-    transitions = memory.sample(batch_size, device)
-    batch = Transition(*zip(*transitions))
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                            batch.next_state)), device=device, dtype=torch.bool)
+def process_state_change(previous_state: State, raw_observation: np.ndarray,
+                         target_net: DQN, policy_net: DQN, memory: ReplayMemory,
+                         action_raw: torch.Tensor, reward: float, done: bool,
+                         recorder: GameRecorder, dqn_config: Config, optimizer: Optimizer) -> State:
+    reward_up = torch.tensor([reward], device=device)
+    current_screen = process_observation_self_play(raw_observation)
+    if recorder:
+        recorder.add_torch_frame(current_screen)
+    if not done:
+        next_frame = current_screen
+        # ':' at first index since it is squeeze dummy dimension
+        next_state = torch.cat((previous_state[:, 1:, :, :].data, next_frame.unsqueeze(0)), dim=1)
+    else:
+        next_state = None
+    memory.push(previous_state, action_raw, next_state, reward_up)
+    state = next_state
+    optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
+    return state
 
-    non_final_next_states = torch.cat([s for s in batch.next_state
-                                       if s is not None])
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
 
-    state_action_values = policy_net(state_batch).gather(1, action_batch)
-    next_state_values = torch.zeros(batch_size, device=device)
-    next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
-    expected_state_action_values = (next_state_values * gamma) + reward_batch
+def prepare_initial_state(env: SpaceGameEnvironment) -> State:
+    observation_up = env.reset()
+    processed_screen_up = process_observation_self_play(
+        observation_up)
+    history_up = [processed_screen_up]
+    for _ in range(2):
+        observation_up, _, _, _ = env.step(EnvironmentAction.StandStill)
+        processed_screen_up = process_observation_self_play(observation_up)
+        history_up.append(processed_screen_up)
+    state_up = torch.cat(tuple(history_up)).unsqueeze(0)
+    return state_up
 
-    loss = smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 
-    optimizer.zero_grad()
-    loss.backward()
-    for param in policy_net.parameters():
-        param.grad.data.clamp_(-1, 1)
-    optimizer.step()
+def prepare_initial_states(env: SpaceGameSelfPlayEnvironment, steps_done: int) -> Tuple[State, State]:
+    observation_up, observation_down = env.reset(steps_done)
+    processed_screen_up, processed_screen_down = process_observation_self_play(
+        observation_up), process_observation_self_play(observation_down)
+    history_up = [processed_screen_up]
+    history_down = [processed_screen_down]
+    for _ in range(2):
+        (_, observation_up, _), (_, observation_down, _) = env.step(
+            (EnvironmentAction.StandStill, EnvironmentAction.StandStill)
+        )
+        processed_screen_up = process_observation_self_play(observation_up)
+        history_up.append(processed_screen_up)
+        processed_screen_down = process_observation_self_play(observation_down)
+        history_down.append(processed_screen_down)
+    state_up = torch.cat(tuple(history_up)).unsqueeze(0)
+    state_down = torch.cat(tuple(history_down)).unsqueeze(0)
+    return state_up, state_down
+
+
+def train(
+        env: SpaceGameSelfPlayEnvironment,
+        n_actions: int,
+        policy_net_up: DQN,
+        target_net_up: DQN,
+        policy_net_down: DQN,
+        target_net_down: DQN,
+        memory: ReplayMemory,
+        optimizer_up: Optimizer,
+        optimizer_down: Optimizer,
+        dqn_config: Config,
+        i_episode: int,
+        recordings_directory: Path,
+        steps_done: int
+) -> int:
+    up_recorder = None
+    down_recorder = None
+    recordable_game = ((i_episode + 1) % dqn_config.target_update) == 0
+    if recordable_game:
+        screen_width, screen_height, _ = env.sample_observation_space().shape
+        up_recorder = GameRecorder(
+            screen_width,
+            screen_height,
+            grayscale=True,
+            directory_path=recordings_directory,
+            filename=f"up_{i_episode}_raw"
+        )
+        down_recorder = GameRecorder(
+            screen_width,
+            screen_height,
+            grayscale=True,
+            directory_path=recordings_directory,
+            filename=f"down_{i_episode}_raw"
+        )
+    state_up, state_down = prepare_initial_states(env, steps_done)
+    for t in range(3000):
+        action_up = select_action(
+            dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_up, n_actions,
+            state_up.to(device), steps_done
+        )
+        action_down = select_action(
+            dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_down, n_actions,
+            state_down.to(device), steps_done
+        )
+        action_parsed_up = EnvironmentAction(action_up.item())
+        action_parsed_down = EnvironmentAction(action_down.item())
+        steps_done += 1
+        (reward_up, observation_up, done_up), (reward_down, observation_down, done_down) = env.step(
+            (action_parsed_up, action_parsed_down)
+        )
+        state_up = process_state_change(
+            state_up, observation_up, target_net_up, target_net_up, memory, action_up, reward_up,
+            done_up or done_down, up_recorder, dqn_config, optimizer_up
+        )
+        state_down = process_state_change(
+            state_down, observation_down, target_net_down, target_net_down, memory, action_down, reward_down,
+            done_up or done_down, down_recorder, dqn_config, optimizer_down
+        )
+        if done_up or done_down:
+            print(f"Episode {i_episode}")
+            if up_recorder:
+                up_recorder.save_recording()
+            if down_recorder:
+                down_recorder.save_recording()
+            break
+    return steps_done
+
+
+def test(
+        test_episode_count: int,
+        env: SpaceGameSelfPlayEnvironment,
+        dqn_config: Config,
+        target_net_up: DQN,
+        target_net_down: DQN,
+        recordings_directory: Path,
+        visualize_test: bool,
+        writer: SummaryWriter
+):
+    print("test_episode: ", test_episode_count)
+    env_config_copied = deepcopy(env.environment_config)
+    env_config_copied.render = visualize_test
+    game_config_copied = deepcopy(env.space_game_config)
+    test_env = SpaceGameEnvironment(game_config=game_config_copied, environment_config=env_config_copied)
+    win_rate_up, average_game_duration_up = test_model(test_env, dqn_config, target_net_up,
+                                                       recordings_directory, test_episode_count)
+    win_rate_down, average_game_duration_down = test_model(test_env, dqn_config, target_net_down,
+                                                           recordings_directory, test_episode_count)
+    writer.add_scalar("Test episode upside winratio", win_rate_up, test_episode_count)
+    writer.add_scalar("Test episode upside average game length", average_game_duration_up,
+                      test_episode_count)
+    print("upside win ratio: ", win_rate_up)
+    print("upside game length: ", average_game_duration_up)
+    writer.add_scalar("Test episode upside winratio", win_rate_down, test_episode_count)
+    writer.add_scalar("Test episode upside average game length", average_game_duration_down,
+                      test_episode_count)
+    print("upside win ratio: ", win_rate_down)
+    print("upside game length: ", average_game_duration_down)
+
+
+def test_model(test_env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN,
+               recordings_directory: Path, test_episode_count: int) -> Tuple[int, float]:
+    won_games = 0
+    game_durations = 0
+    with torch.no_grad():
+        for run_id in range(dqn_config.n_test_runs):
+            game_duration, has_won = test_game(env=test_env, policy_net=policy_net,
+                                               test_episode_count=test_episode_count,
+                                               recordings_directory=recordings_directory, run_id=f"{run_id}_up")
+            won_games += (1 if has_won else 0)
+            game_durations += game_duration
+    return won_games // dqn_config.n_test_runs, game_durations / dqn_config.n_test_runs
 
 
 def test_game(
-        env: gym.Env, recordings_directory: Path, test_episode_count: int,
-        policy_net: DQN, run_id: str, dqn_config: Config
+        env: SpaceGameEnvironment, recordings_directory: Path, test_episode_count: int,
+        policy_net: DQN, run_id: str
 ) -> Tuple[GameLength, HasAgentWon]:
-    screen_raw = env.reset()
-    last_screen = process_observation_self_play(screen_raw)
-    current_screen = last_screen
-    raw_screen_width, raw_screen_height, _ = screen_raw.shape
     done = False
     game_length = 0
     info = {'agent_hp': float('inf')}
-    last_frame = current_screen - last_screen
-    _, pov_screen_width, pov_screen_height = last_frame.shape
-    history = deque([last_frame])
+    raw_screen_width, raw_screen_height, _ = env.sample_observation_space().shape
+    pov_screen_width, pov_screen_height = raw_screen_width, raw_screen_height
     recorder = GameRecorder(
         raw_screen_width,
         raw_screen_height,
         grayscale=True,
         directory_path=recordings_directory,
-        filename=f"{test_episode_count}_{run_id}_raw"
+        filename=f"test_{test_episode_count}_{run_id}_raw"
     )
     recorder_pov = GameRecorder(
         pov_screen_width,
         pov_screen_height,
         grayscale=True,
         directory_path=recordings_directory,
-        filename=f"{test_episode_count}_{run_id}_pov"
+        filename=f"test_{test_episode_count}_{run_id}_pov"
     )
-    for _ in range(2):
-        observation, _, _, _ = env.step(0)
-        last_screen = current_screen
-        current_screen = process_observation_self_play(observation)
-        recorder.add_torch_frame(current_screen.cpu())
-        last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
-        recorder_pov.add_torch_frame(last_frame.cpu())
-        history.append(last_frame)
-    state = torch.cat(tuple(history)).unsqueeze(0)
+
+    state = prepare_initial_state(env)
     while not done:
-        action = policy_net(state).max(1)[1].view(1, 1)
+        action = policy_net(state.to(device).float()).max(1)[1].view(1, 1)
         observation, _, done, info = env.step(action.item())
-        last_screen = current_screen
         current_screen = process_observation_self_play(observation)
-        recorder.add_torch_frame(current_screen.cpu())
-        next_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
-        recorder_pov.add_torch_frame(next_frame.cpu())
+        recorder.add_torch_frame(current_screen)
+        next_frame = current_screen
+        recorder_pov.add_torch_frame(next_frame)
         state = torch.cat((state[:, 1:, :, :], next_frame.unsqueeze(0)), dim=1)
         game_length += 1
     recorder.save_recording()
@@ -296,55 +327,5 @@ def test_game(
     return game_length, info['agent_hp'] > 0
 
 
-def test_run_2(env: SpaceGameSelfPlayEnvironment, dqn_config: Config, dqn: DQN):
-    observation_up, observation_down = env.reset()
-    last_screen_up, last_screen_down = process_observation_self_play(observation_up), process_observation_self_play(
-        observation_down)
-    current_screen_up, current_screen_down = process_observation_self_play(
-        observation_up), process_observation_self_play(observation_down)
-    last_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-    last_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-    history_up = deque([last_frame_up])
-    history_down = deque([last_frame_down])
-    done_up, done_down = False, False
-    for _ in range(2):
-        (_, observation_up, done_up), (_, observation_down, done_down) = env.step(
-            (EnvironmentAction.StandStill, EnvironmentAction.StandStill)
-        )
-        last_screen_up = current_screen_up
-        current_screen_up = process_observation_self_play(observation_up)
-        last_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-        history_up.append(last_frame_up)
-        last_screen_down = current_screen_down
-        current_screen_down = process_observation_self_play(observation_down)
-        last_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-        history_down.append(last_frame_down)
-    state_up = torch.cat(tuple(history_up)).unsqueeze(0)
-    state_down = torch.cat(tuple(history_down)).unsqueeze(0)
-    while not done_up and not done_down:
-        action_up = dqn(state_up).max(1)[1].view(1, 1)
-        action_down = dqn(state_up).max(1)[1].view(1, 1)
-        action_parsed_up = EnvironmentAction(action_up.item())
-        action_parsed_down = EnvironmentAction(action_down.item())
-        (reward_up, observation_up, done_up), (reward_down, observation_down, done_down) = env.step(
-            (action_parsed_up, action_parsed_down)
-        )
-        last_screen_up = current_screen_up
-        last_screen_down = current_screen_down
-        current_screen_up = process_observation_self_play(observation_up)
-        current_screen_down = process_observation_self_play(observation_down)
-        if not (done_up or done_down):
-            next_frame_up = current_screen_up - last_screen_up if dqn_config.is_state_based_on_change else last_screen_up
-            next_frame_down = current_screen_down - last_screen_down if dqn_config.is_state_based_on_change else last_screen_down
-            # ':' at first index since it is squeeze dummy dimension
-            next_state_up = torch.cat((state_up[:, 1:, :, :], next_frame_up.unsqueeze(0)), dim=1)
-            next_state_down = torch.cat((state_down[:, 1:, :, :], next_frame_down.unsqueeze(0)), dim=1)
-        else:
-            next_state_up = None
-            next_state_down = None
-        state_up = next_state_up
-        state_down = next_state_down
-
-
 if __name__ == "__main__":
-    train()
+    train_model()

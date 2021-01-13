@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from itertools import product
 
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
@@ -9,9 +10,10 @@ from space_game.Config import Config
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from models.DQN.single_agent_training import train_model
-from models.DQN.self_play_training import train
+from models.DQN.self_play_training import train_model
 from models.DQN.Config import Config as DQNConfig
 from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
+from space_game.ai.RandomAI import RandomAI
 from space_game.domain_names import Side
 
 
@@ -49,7 +51,7 @@ def self_play_dqn_training():
     env_config.render = False
     env = SpaceGameSelfPlayEnvironment(environment_config=env_config)
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "custom_dqn_config.yml")
-    train(env=env, dqn_config=dqn_config)
+    train_model(env=env, dqn_config=dqn_config)
 
 
 def dqn_train_scenario_1():
@@ -62,17 +64,18 @@ def dqn_train_scenario_1():
     model = train_model(single_agent_env, dqn_config)
     dqn_config.games_total = 100
     self_play_env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
-    train(env=self_play_env, dqn_config=dqn_config, old_model=model)
+    train_model(env=self_play_env, dqn_config=dqn_config, old_model=model)
 
 
 if __name__ == '__main__':
     game_config = Config.custom(CONFIGS_DIRECTORY / "unified_space_game_config.yml")
     env_config = SpaceGameEnvironmentConfig.custom(CONFIGS_DIRECTORY / "unified_gym_api_env_config.yml")
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "unified_dqn_config.yml")
-    env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
-    gammas = [0.9, .95, .99]
+    env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
+    gammas = [.99, .9999, .999999]
     batch_sizes = [128]
-    eps_decays = [.1, .3]
+    eps_decays = [.3, .5]
+    env_config.step_reward = -0.01
 
     for gamma in gammas:
         dqn_config.gamma = gamma
@@ -80,5 +83,5 @@ if __name__ == '__main__':
             dqn_config.batch_size = batch_size
             for eps_decay in eps_decays:
                 dqn_config.eps_decay = eps_decay * dqn_config.games_total * 200
-                run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}"
-                train_model(env, dqn_config, custom_train_run_id=run_id)
+                run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+                train_model(env, dqn_config)

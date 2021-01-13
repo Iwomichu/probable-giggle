@@ -8,7 +8,7 @@ from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from models.DQN.Config import Config as DQNConfig
 from models.DQN.single_agent_training import train_model
-from models.DQN.self_play_training import train
+from models.DQN.self_play_training import train_model
 
 
 @click.group()
@@ -40,7 +40,7 @@ def unified_self_play_dqn(saved_model_path: str):
 
     self_play_env = SpaceGameSelfPlayEnvironment(space_game_config=space_game_config,
                                                  environment_config=gym_api_env_config)
-    train(
+    train_model(
         env=self_play_env,
         dqn_config=dqn_config,
         old_model=model
