@@ -77,3 +77,11 @@ class RewardSystem(EventProcessor, Registrable):
 
     def is_game_over(self):
         return self.done
+
+    def get_current_rewards(self):
+        return {
+            "got_damaged": self.get_value(self.environment_config.target_hit_reward_start, self.environment_config.target_hit_reward_end, self.environment_config.target_hit_reward_decay),
+            "damaged_opponent": self.get_value(self.environment_config.taken_damage_reward_start, self.environment_config.taken_damage_reward_end, self.environment_config.taken_damage_reward_decay),
+            "game_lost": self.get_value(self.environment_config.game_lost_reward_start, self.environment_config.game_lost_reward_end, self.environment_config.game_lost_reward_decay),
+            "game_won": self.get_value(self.environment_config.game_won_reward_start, self.environment_config.game_won_reward_end, self.environment_config.game_won_reward_decay)
+        }

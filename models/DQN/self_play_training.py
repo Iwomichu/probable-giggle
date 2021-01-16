@@ -54,9 +54,10 @@ def train_model(
         custom_logs_directory: Path = None,
         custom_recordings_directory: Path = None,
         visualize_test: bool = False,
-        old_model: DQN = None
+        old_model: DQN = None,
+        custom_train_id: str = None
 ) -> Tuple[DQN, DQN]:
-    train_run_id = f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+    train_run_id = custom_train_id if custom_train_id else f"CustomDQN_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
     recordings_directory = custom_recordings_directory \
         if custom_recordings_directory is not None \
         else RECORDED_GAMES_DIRECTORY / train_run_id
@@ -93,6 +94,7 @@ def train_model(
             i_episode, recordings_directory, steps_done
         )
         if (i_episode + 1) % dqn_config.target_update == 0:
+            print(f"episode: {i_episode}")
             target_net_up.load_state_dict(policy_net_up.state_dict())
             target_net_down.load_state_dict(policy_net_down.state_dict())
             torch.save(target_net_up, model_save_directory / "dqn_up.pt")
@@ -105,6 +107,7 @@ def train_model(
                 recordings_directory, visualize_test, writer
             )
             test_episode_count += 1
+            print(env.get_current_rewards())
 
     print("STOP")
     return target_net_up, target_net_down
@@ -234,7 +237,6 @@ def train(
             done_up or done_down, down_recorder, dqn_config, optimizer_down
         )
         if done_up or done_down:
-            print(f"Episode {i_episode}")
             if up_recorder:
                 up_recorder.save_recording()
             if down_recorder:
@@ -259,33 +261,33 @@ def test(
     game_config_copied = deepcopy(env.space_game_config)
     test_env = SpaceGameEnvironment(game_config=game_config_copied, environment_config=env_config_copied)
     win_rate_up, average_game_duration_up = test_model(test_env, dqn_config, target_net_up,
-                                                       recordings_directory, test_episode_count)
+                                                       recordings_directory, test_episode_count, side='up')
     win_rate_down, average_game_duration_down = test_model(test_env, dqn_config, target_net_down,
-                                                           recordings_directory, test_episode_count)
+                                                           recordings_directory, test_episode_count, side='down')
     writer.add_scalar("Test episode upside winratio", win_rate_up, test_episode_count)
     writer.add_scalar("Test episode upside average game length", average_game_duration_up,
                       test_episode_count)
     print("upside win ratio: ", win_rate_up)
     print("upside game length: ", average_game_duration_up)
-    writer.add_scalar("Test episode upside winratio", win_rate_down, test_episode_count)
-    writer.add_scalar("Test episode upside average game length", average_game_duration_down,
+    writer.add_scalar("Test episode downside winratio", win_rate_down, test_episode_count)
+    writer.add_scalar("Test episode downside average game length", average_game_duration_down,
                       test_episode_count)
-    print("upside win ratio: ", win_rate_down)
-    print("upside game length: ", average_game_duration_down)
+    print("downside win ratio: ", win_rate_down)
+    print("downside game length: ", average_game_duration_down)
 
 
 def test_model(test_env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN,
-               recordings_directory: Path, test_episode_count: int) -> Tuple[int, float]:
+               recordings_directory: Path, test_episode_count: int, side: str) -> Tuple[float, float]:
     won_games = 0
     game_durations = 0
     with torch.no_grad():
         for run_id in range(dqn_config.n_test_runs):
             game_duration, has_won = test_game(env=test_env, policy_net=policy_net,
                                                test_episode_count=test_episode_count,
-                                               recordings_directory=recordings_directory, run_id=f"{run_id}_up")
+                                               recordings_directory=recordings_directory, run_id=f"{run_id}_{side}")
             won_games += (1 if has_won else 0)
             game_durations += game_duration
-    return won_games // dqn_config.n_test_runs, game_durations / dqn_config.n_test_runs
+    return won_games / dqn_config.n_test_runs, game_durations / dqn_config.n_test_runs
 
 
 def test_game(

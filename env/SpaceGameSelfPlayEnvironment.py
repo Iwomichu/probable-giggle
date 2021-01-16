@@ -166,3 +166,6 @@ class SpaceGameSelfPlayEnvironment:
 
     def sample_observation_space(self):
         return self.game_controller.screen.process_map()
+
+    def get_current_rewards(self):
+        return self.reward_system_1.get_current_rewards()
