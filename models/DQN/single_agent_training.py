@@ -119,7 +119,7 @@ def test(dqn_config: Config, env: SpaceGameEnvironment, recordings_directory: Pa
 
 def train(env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN, n_actions: int, memory: ReplayMemory,
           target_net: DQN, optimizer: Optimizer, i_episode: int, writer: SummaryWriter, steps_done: int) -> int:
-    observation = env.reset(steps_done)
+    observation = env.reset(i_episode)
     last_screen = process_observation(observation)
     current_screen = process_observation(observation)
     last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
