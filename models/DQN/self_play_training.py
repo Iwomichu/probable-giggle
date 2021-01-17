@@ -108,9 +108,14 @@ def train_model(
             )
             test_episode_count += 1
             print(env.get_current_rewards())
+            print(f"current_eps_threshold: {calculate_epsilon_threshold(dqn_config.eps_start, dqn_config.eps_end, dqn_config.eps_decay, steps_done)}")
 
     print("STOP")
     return target_net_up, target_net_down
+
+
+def calculate_epsilon_threshold(eps_start: float, eps_done: float, eps_decay: int, steps_done: int) -> float:
+    return eps_done + (eps_start - eps_done) * math.exp(-1. * steps_done / eps_decay)
 
 
 def select_action(
@@ -118,7 +123,7 @@ def select_action(
         n_actions: int, state: State, steps_done: int
 ) -> RawAction:
     sample = random.random()
-    eps_threshold = eps_done + (eps_start - eps_done) * math.exp(-1. * steps_done / eps_decay)
+    eps_threshold = calculate_epsilon_threshold(eps_start, eps_done, eps_decay, steps_done)
     if sample > eps_threshold:
         with torch.no_grad():
             return policy_net(state.to(device).float()).max(1)[1].view(1, 1)
@@ -146,8 +151,8 @@ def process_state_change(previous_state: State, raw_observation: np.ndarray,
     return state
 
 
-def prepare_initial_state(env: SpaceGameEnvironment) -> State:
-    observation_up = env.reset()
+def prepare_initial_state(env: SpaceGameEnvironment, game_index: int) -> State:
+    observation_up = env.reset(game_index)
     processed_screen_up = process_observation_self_play(
         observation_up)
     history_up = [processed_screen_up]
@@ -159,8 +164,8 @@ def prepare_initial_state(env: SpaceGameEnvironment) -> State:
     return state_up
 
 
-def prepare_initial_states(env: SpaceGameSelfPlayEnvironment, steps_done: int) -> Tuple[State, State]:
-    observation_up, observation_down = env.reset(steps_done)
+def prepare_initial_states(env: SpaceGameSelfPlayEnvironment, i_episode: int) -> Tuple[State, State]:
+    observation_up, observation_down = env.reset(i_episode)
     processed_screen_up, processed_screen_down = process_observation_self_play(
         observation_up), process_observation_self_play(observation_down)
     history_up = [processed_screen_up]
@@ -212,7 +217,7 @@ def train(
             directory_path=recordings_directory,
             filename=f"down_{i_episode}_raw"
         )
-    state_up, state_down = prepare_initial_states(env, steps_done)
+    state_up, state_down = prepare_initial_states(env, i_episode)
     for t in range(3000):
         action_up = select_action(
             dqn_config.eps_end, dqn_config.eps_start, dqn_config.eps_decay, policy_net_up, n_actions,
@@ -314,7 +319,7 @@ def test_game(
         filename=f"test_{test_episode_count}_{run_id}_pov"
     )
 
-    state = prepare_initial_state(env)
+    state = prepare_initial_state(env, 0)
     while not done:
         action = policy_net(state.to(device).float()).max(1)[1].view(1, 1)
         observation, _, done, info = env.step(action.item())

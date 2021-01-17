@@ -10,7 +10,6 @@ from env.SimplifiedEnvironmentAction import SimplifiedEnvironmentAction
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 from space_game.Config import Config
-from space_game.ai.DecisionBasedController import DecisionBasedController
 from space_game.domain_names import Side
 from space_game.GameController import GameController
 from space_game.Player import create_player_1, create_player_2
@@ -62,7 +61,7 @@ class SpaceGameEnvironment(gym.Env):
         self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
         self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 1), dtype=uint8)
 
-    def reset(self, previously_done_steps=0):
+    def reset(self, game_index=0):
         self.game_controller = GameController(self.game_config, self.renderable)
 
         self.steps_left = self.environment_config.max_steps
@@ -73,7 +72,7 @@ class SpaceGameEnvironment(gym.Env):
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent)
-        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent, previously_done_steps)
+        self.reward_system = RewardSystem(self.environment_config, self.game_config, self.agent, game_index)
         self.reward_system.register(self.game_controller.event_manager)
 
         # OPPONENT INITIALIZATION
@@ -122,27 +121,3 @@ class SpaceGameEnvironment(gym.Env):
 
     def sample_observation_space(self):
         return self.game_controller.screen.process_map()
-
-
-def main():
-    from stable_baselines3.dqn.policies import CnnPolicy as Policy
-    from stable_baselines3 import DQN
-    from stable_baselines3.common.monitor import Monitor
-
-    env_config = SpaceGameEnvironmentConfig(
-        render=False,
-        OpponentControllerType=DecisionBasedController,
-        step_reward=-.01,
-        target_hit_reward=10,
-        taken_damage_reward=-10,
-    )
-    env = Monitor(SpaceGameEnvironment(env_config))
-    model = DQN(Policy, env, verbose=1, buffer_size=10**4, tensorboard_log="../models/runs")
-    for i in range(1000):
-        model.learn(total_timesteps=10**5)
-        model.save("deepq_breakout")
-        print("model_saved")
-
-
-if __name__ == "__main__":
-    main()
