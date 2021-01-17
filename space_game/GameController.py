@@ -24,6 +24,7 @@ from space_game.managers.EventManager import EventManager
 from space_game.managers.KeyboardEventsProcessor import KeyboardEventsProcessor
 from space_game.managers.MovableManager import MovableManager
 from space_game.managers.StatefulsManager import StatefulsManager
+from space_game.Winner import Winner
 
 
 class GameController:
@@ -103,6 +104,14 @@ class GameController:
         surf = self.screen.convert_to_pygame_surface()
         self.window.blit(surf, (0, 0))
         pygame.display.update()
+
+    def is_game_over(self):
+        if self.players[0].hitpoints <= 0:
+            return Winner.PLAYER2
+        if self.players[1].hitpoints <= 0:
+            return Winner.PLAYER1
+        return Winner.NOBODY
+
 
     def __del__(self):
         self.screen.screen = None

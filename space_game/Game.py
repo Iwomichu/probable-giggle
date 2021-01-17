@@ -7,6 +7,7 @@ import logging
 import constants
 from space_game.GameController import GameController
 from space_game.PlayerTuple import PlayerTuple
+from space_game.Winner import Winner
 from space_game.ai.DecisionBasedController import DecisionBasedController
 from space_game.domain_names import Side
 from space_game.events.KeyPressedEvent import KeyPressedEvent
@@ -89,6 +90,11 @@ class Game:
                 if val:
                     self.game_controller.event_manager.add_event(KeyPressedEvent(key))
             self.game_controller.__refresh__()
+            winner = self.game_controller.is_game_over()
+            if winner == Winner.PLAYER1:
+                return Winner.PLAYER1
+            if winner == Winner.PLAYER2:
+                return Winner.PLAYER2
 
         pygame.display.update()
         pygame.time.wait(5000)
