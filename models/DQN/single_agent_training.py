@@ -68,14 +68,18 @@ def train_model(
 
     # Training loop
     test_episode_count = 0
+    epoch_wins = 0
     for i_episode in range(dqn_config.games_total):
-        steps_done = train(env, dqn_config, policy_net, n_actions, memory,
+        steps_done, has_won = train(env, dqn_config, policy_net, n_actions, memory,
                            target_net, optimizer, i_episode, writer, steps_done)
+        epoch_wins += 1 if has_won else 0
         # Testing phase
         if (i_episode+1) % dqn_config.epoch_duration == 0:
             with torch.no_grad():
                 test(dqn_config, env, recordings_directory, target_net, writer, test_episode_count)
                 test_episode_count += 1
+            print(f"won games: {epoch_wins}")
+            epoch_wins = 0
 
     print("STOP")
     save(target_net, save_models_directory)
@@ -118,13 +122,14 @@ def test(dqn_config: Config, env: SpaceGameEnvironment, recordings_directory: Pa
 
 
 def train(env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN, n_actions: int, memory: ReplayMemory,
-          target_net: DQN, optimizer: Optimizer, i_episode: int, writer: SummaryWriter, steps_done: int) -> int:
+          target_net: DQN, optimizer: Optimizer, i_episode: int, writer: SummaryWriter, steps_done: int) -> Tuple[int, bool]:
     observation = env.reset(i_episode)
     last_screen = process_observation(observation)
     current_screen = process_observation(observation)
     last_frame = current_screen - last_screen if dqn_config.is_state_based_on_change else last_screen
     cumulative_reward = 0.
     history = deque([last_frame])
+    info = {'agent_hp': 0}
     for _ in range(2):
         observation, _, _, _ = env.step(EnvironmentAction.StandStill)
         last_screen = current_screen
@@ -153,15 +158,13 @@ def train(env: SpaceGameEnvironment, dqn_config: Config, policy_net: DQN, n_acti
         state = next_state
         optimize_model(memory, dqn_config.batch_size, policy_net, target_net, dqn_config.gamma, optimizer)
         if done:
-            print(f"Episode {i_episode}")
-            print(info)
             break
 
     if (i_episode + 1) % dqn_config.target_update == 0:
         target_net.load_state_dict(policy_net.state_dict())
 
     writer.add_scalar("Episode reward", cumulative_reward, i_episode)
-    return steps_done
+    return steps_done, info['agent_hp'] > 0
 
 
 def save(dqn: DQN, directory: Path) -> None:
