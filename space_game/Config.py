@@ -62,6 +62,10 @@ class Config:
                 print(exc)
 
     @staticmethod
+    def unified():
+        return Config.custom(CONFIGS_DIRECTORY / "unified_space_game_config.yml")
+
+    @staticmethod
     def from_config_dict(config_dict: Dict[str, Any]):
         return Config(
             scale=config_dict['scale'],

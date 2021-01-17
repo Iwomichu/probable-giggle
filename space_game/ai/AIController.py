@@ -28,6 +28,7 @@ class AIController(EventEmitter, EventProcessor, Registrable):
     def process_event(self, event: Event):
         if self.lag_count_left <= 0:
             self.event_processor[type(event)](event)
+            self.lag_count_left = self.lag
         else:
             self.lag_count_left -= 1
 

@@ -37,6 +37,10 @@ class Config:
         )
 
     @staticmethod
+    def unified():
+        return Config.custom(CONFIGS_DIRECTORY / "unified_dqn_config.yml")
+
+    @staticmethod
     def default():
         with open(CONFIGS_DIRECTORY / "dqn_config.default.yml", 'r') as f:
             try:
