@@ -1,8 +1,6 @@
 from typing import List
 
-import numpy as np
 import pygame
-from PIL import Image
 
 from space_game.AccelerationDirection import AccelerationDirection
 from space_game.Config import Config
@@ -105,3 +103,6 @@ class GameController:
         surf = self.screen.convert_to_pygame_surface()
         self.window.blit(surf, (0, 0))
         pygame.display.update()
+
+    def __del__(self):
+        self.screen.screen = None

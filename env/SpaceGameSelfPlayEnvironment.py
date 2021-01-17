@@ -1,10 +1,11 @@
 import numpy as np
 import pygame
 
-from typing import Tuple
+from typing import Tuple, Union
 
 from env.EnvironmentAction import EnvironmentActionToAIActionMapping, EnvironmentAction
 from env.RewardSystem import RewardSystem
+from env.SimplifiedEnvironmentAction import SimplifiedEnvironmentAction
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from space_game.GameController import GameController
 from space_game.Config import Config
@@ -14,15 +15,14 @@ from space_game.ai.AIActionToEventMapping import AIActionToEventMapping
 Reward = float
 Observation = np.ndarray
 Actions = np.ndarray
-Action = EnvironmentAction
+Action = Union[EnvironmentAction, SimplifiedEnvironmentAction]
 Done = bool
 PlayerReturnTuple = Tuple[Reward, Observation, Done]
 
 
 class SpaceGameSelfPlayEnvironment:
-    @staticmethod
-    def get_n_actions():
-        return len(EnvironmentAction)
+    def get_n_actions(self):
+        return len(self.EnvironmentAction)
 
     @staticmethod
     def convert_observation(state: Observation) -> Observation:
@@ -35,7 +35,7 @@ class SpaceGameSelfPlayEnvironment:
         return np.flip(state, axis=1)
 
     @staticmethod
-    def inverse_movement(action: EnvironmentAction) -> EnvironmentAction:
+    def inverse_movement(action: Union[EnvironmentAction, SimplifiedEnvironmentAction]) -> EnvironmentAction:
         """
         Inverses action along X axis (UP <-> DOWN)
 
@@ -62,6 +62,8 @@ class SpaceGameSelfPlayEnvironment:
         self.space_game_config = space_game_config if space_game_config is not None else Config.default()
         self.environment_config = environment_config \
             if environment_config is not None else SpaceGameEnvironmentConfig.default()
+        self.EnvironmentAction = SimplifiedEnvironmentAction \
+            if self.environment_config.use_simplified_environment_actions else EnvironmentAction
         self.running = True
         self.clock = pygame.time.Clock()
         self.game_controller = GameController(self.space_game_config, renderable=self.environment_config.render)
@@ -87,7 +89,7 @@ class SpaceGameSelfPlayEnvironment:
 
         self.history = []
 
-    def reset(self) -> Tuple[Observation, Observation]:
+    def reset(self, game_index=0) -> Tuple[Observation, Observation]:
         """
         Reload game internals
         :return: Map of newly created game
@@ -104,7 +106,7 @@ class SpaceGameSelfPlayEnvironment:
             self.game_controller.event_manager
         )
         self.game_controller.__add_player__(self.agent_1)
-        self.reward_system_1 = RewardSystem(self.environment_config, self.space_game_config, self.agent_1)
+        self.reward_system_1 = RewardSystem(self.environment_config, self.space_game_config, self.agent_1, game_index)
         self.reward_system_1.register(self.game_controller.event_manager)
 
         # DOWN SIDE INITIALIZATION
@@ -164,3 +166,6 @@ class SpaceGameSelfPlayEnvironment:
 
     def sample_observation_space(self):
         return self.game_controller.screen.process_map()
+
+    def get_current_rewards(self):
+        return self.reward_system_1.get_current_rewards()
