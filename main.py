@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from itertools import product
 from pathlib import Path
 
 import torch
@@ -14,12 +13,15 @@ from space_game.Config import Config
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
 from models.DQN.single_agent_training import train_model as single_train_model
-from models.DQN.self_play_training import train_model as self_play_train_model
 from models.DQN.Config import Config as DQNConfig
 from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
 from space_game.ai.RandomAI import RandomAI
 from space_game.domain_names import Side
 from tournament_system.TournamentRegister import TournamentRegister
+
+from models.DQN.self_play_training import train_model as sp_def
+from models.DQN_without_BN.self_play_training import train_model as sp_without_bn
+from models.DQN_paper.self_play_training import train_model as sp_paper
 
 
 def space_game_only():
@@ -57,7 +59,25 @@ def self_play_dqn_training():
     env_config.render = False
     env = SpaceGameSelfPlayEnvironment(space_game_config=game_config, environment_config=env_config)
     dqn_config = DQNConfig.unified()
-    self_play_train_model(env=env, dqn_config=dqn_config)
+    sp_def(env=env, dqn_config=dqn_config)
+
+
+def self_play_dqn_without_bn_training():
+    game_config = Config.unified()
+    env_config = SpaceGameEnvironmentConfig.unified()
+    env_config.render = False
+    env = SpaceGameSelfPlayEnvironment(space_game_config=game_config, environment_config=env_config)
+    dqn_config = DQNConfig.unified()
+    sp_without_bn(env=env, dqn_config=dqn_config)
+
+
+def self_play_dqn_paper_training():
+    game_config = Config.unified()
+    env_config = SpaceGameEnvironmentConfig.unified()
+    env_config.render = False
+    env = SpaceGameSelfPlayEnvironment(space_game_config=game_config, environment_config=env_config)
+    dqn_config = DQNConfig.unified()
+    sp_paper(env=env, dqn_config=dqn_config)
 
 
 def dqn_train_scenario_1():
@@ -70,7 +90,7 @@ def dqn_train_scenario_1():
     model = single_train_model(single_agent_env, dqn_config)
     dqn_config.games_total = 100
     self_play_env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
-    self_play_train_model(env=self_play_env, dqn_config=dqn_config, old_model=model)
+    # self_play_train_model(env=self_play_env, dqn_config=dqn_config, old_model=model)
 
 
 def self_play_old_model(model_path: Path):
@@ -89,11 +109,10 @@ def self_play_old_model(model_path: Path):
             for eps_decay in eps_decays:
                 dqn_config.eps_decay = eps_decay * dqn_config.games_total * 200
                 run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
-                self_play_train_model(env, dqn_config, old_model=model, custom_train_id=run_id)
+                # self_play_train_model(env, dqn_config, old_model=model, custom_train_id=run_id)
 
 
-
-if __name__ == '__main__':
+def perform_tournament():
     dqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
     cdqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
     cnn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
@@ -101,4 +120,7 @@ if __name__ == '__main__':
     tournament = TournamentRegister(1, 1, dqn, cdqn, cnn)
     tournament.tournament()
     tournament.ranking()
-    #self_play_dqn_training()
+
+
+if __name__ == '__main__':
+    perform_tournament()
