@@ -23,5 +23,5 @@ class DQNWrapper(TorchNNModuleInterface):
 
     @staticmethod
     def from_file(path: Path):
-        model = torch.load(str(path))
+        model = torch.load(str(path), map_location=torch.device('cpu'))
         return DQNWrapper(model)

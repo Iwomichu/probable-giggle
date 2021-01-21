@@ -19,6 +19,7 @@ class CDQNController(AIController):
                  opponent: Player, side: Side, screen: Screen, *,
                  dqn_model: torch.nn.Module = None, dqn_wrapper: DQNWrapper = None, dqn_path: Path = None):
         super().__init__(event_manager, config, player, opponent, side, screen)
+        self.side = side
         if dqn_wrapper is not None:
             self.dqn_wrapper = dqn_wrapper
         else:
@@ -29,7 +30,10 @@ class CDQNController(AIController):
 
     def react(self):
         current_map = self.get_current_map()
-        choice = self.dqn_wrapper.predict(current_map)
+        if self.side == Side.UP:
+            choice = self.dqn_wrapper.predict(current_map)
+        else:
+            choice = self.dqn_wrapper.predict(np.flip(current_map, axis=1).copy())
 
         for event in AIActionToEventMapping[choice](id(self.player)):
             self.event_manager.add_event(event)

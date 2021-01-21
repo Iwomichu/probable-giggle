@@ -4,6 +4,7 @@ from pathlib import Path
 
 import torch
 
+from common.DQNWrapper import DQNWrapper
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
 from space_game.Game import Game
 from space_game.Player import create_human_player_2, create_player_1
@@ -18,6 +19,7 @@ from models.DQN.Config import Config as DQNConfig
 from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
 from space_game.ai.RandomAI import RandomAI
 from space_game.domain_names import Side
+from tournament_system.TournamentRegister import TournamentRegister
 
 
 def space_game_only():
@@ -90,5 +92,13 @@ def self_play_old_model(model_path: Path):
                 self_play_train_model(env, dqn_config, old_model=model, custom_train_id=run_id)
 
 
+
 if __name__ == '__main__':
-    self_play_dqn_training()
+    dqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+    cdqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+    cnn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+
+    tournament = TournamentRegister(1, 1, dqn, cdqn, cnn)
+    tournament.tournament()
+    tournament.ranking()
+    #self_play_dqn_training()
