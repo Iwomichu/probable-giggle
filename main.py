@@ -98,7 +98,7 @@ def dqn_train_scenario_1():
 
 def train_sb3_dqn(game_config, env_config):
     env = Monitor(SpaceGameEnvironment(game_config=game_config, environment_config=env_config))
-    model = DQN(Policy, env, verbose=1, buffer_size=10**4, tensorboard_log="runs")
+    model = DQN(Policy, env, verbose=1, buffer_size=10**4, tensorboard_log="logs")
     model.learn(total_timesteps=10**6)
 
 
