@@ -28,7 +28,7 @@ from models.DQN_paper.self_play_training import train_model as sp_paper
 
 
 def space_game_only():
-    game_config = Config.custom(CONFIGS_DIRECTORY / "bigger_space_game_config.yml")
+    game_config = Config.unified()
     game = Game(game_config)
     game.start()
 
@@ -129,4 +129,6 @@ def self_play_train_dqn():
 
 
 if __name__ == '__main__':
-    print("EMPTY")
+    game_config = Config.unified()
+    env_config = SpaceGameEnvironmentConfig.unified()
+    train_sb3_dqn(game_config, env_config)
