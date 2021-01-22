@@ -2,6 +2,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
+from stable_baselines3.dqn.policies import CnnPolicy as Policy
+from stable_baselines3 import DQN
+from stable_baselines3.common.monitor import Monitor
 
 from common.DQNWrapper import DQNWrapper
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
@@ -93,23 +96,10 @@ def dqn_train_scenario_1():
     # self_play_train_model(env=self_play_env, dqn_config=dqn_config, old_model=model)
 
 
-def self_play_old_model(model_path: Path):
-    model = torch.load(model_path)
-    game_config = Config.custom(CONFIGS_DIRECTORY / "unified_space_game_config.yml")
-    env_config = SpaceGameEnvironmentConfig.custom(CONFIGS_DIRECTORY / "continue_unified_gym_api_env_config.yml")
-    dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "continue_training_unified_dqn_config.yml")
-    env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
-    gammas = [.999999]
-    batch_sizes = [128]
-    eps_decays = [.3]
-    for gamma in gammas:
-        dqn_config.gamma = gamma
-        for batch_size in batch_sizes:
-            dqn_config.batch_size = batch_size
-            for eps_decay in eps_decays:
-                dqn_config.eps_decay = eps_decay * dqn_config.games_total * 200
-                run_id = f"C_DQN_{gamma}_{batch_size}_{eps_decay}_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
-                # self_play_train_model(env, dqn_config, old_model=model, custom_train_id=run_id)
+def train_sb3_dqn(game_config, env_config):
+    env = Monitor(SpaceGameEnvironment(game_config=game_config, environment_config=env_config))
+    model = DQN(Policy, env, verbose=1, buffer_size=10**4, tensorboard_log="runs")
+    model.learn(total_timesteps=10**6)
 
 
 def perform_tournament():
@@ -122,5 +112,20 @@ def perform_tournament():
     tournament.ranking()
 
 
+def self_play_train_dqn():
+    game_config = Config.unified()
+    env_config = SpaceGameEnvironmentConfig.unified()
+    dqn_config = DQNConfig.unified()
+    env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
+    gammas = [.999, .999999]
+    batch_sizes = [128, 256]
+    for gamma in gammas:
+        dqn_config.gamma = gamma
+        for batch_size in batch_sizes:
+            dqn_config.batch_size = batch_size
+            run_id = f"C_DQN_{gamma}_{batch_size}_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}"
+            sp_paper(env, dqn_config, custom_train_id=run_id)
+
+
 if __name__ == '__main__':
-    perform_tournament()
+    print("EMPTY")
