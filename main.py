@@ -100,6 +100,7 @@ def train_sb3_dqn(game_config, env_config):
     env = Monitor(SpaceGameEnvironment(game_config=game_config, environment_config=env_config))
     model = DQN(Policy, env, verbose=1, buffer_size=10**4, tensorboard_log="logs")
     model.learn(total_timesteps=10**6)
+    model.save(SAVED_MODELS_DIRECTORY / f"SB3_{datetime.now(tz=timezone.utc).strftime('%H-%M-%S_%d-%m-%Y')}")
 
 
 def perform_tournament():
