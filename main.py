@@ -9,17 +9,19 @@ from stable_baselines3.common.monitor import Monitor
 from common.DQNWrapper import DQNWrapper
 from env.SpaceGameSelfPlayEnvironment import SpaceGameSelfPlayEnvironment
 from space_game.Game import Game
-from space_game.Player import create_human_player_2, create_player_1
+from space_game.Player import create_human_player_2, create_player_1, create_player_2, create_human_player_1
 from space_game.PlayerTuple import PlayerTuple
 from space_game.ai.CDQNController import CDQNController
 from space_game.Config import Config
 from env.SpaceGameEnvironmentConfig import SpaceGameEnvironmentConfig
 from env.SpaceGameGymAPIEnvironment import SpaceGameEnvironment
-from models.DQN.single_agent_training import train_model as single_train_model
+from models.DQN.single_agent_training import train_model as single_train_def_model
+from models.DQN_paper.single_agent_training import train_model as single_train_paper_model
 from models.DQN.Config import Config as DQNConfig
 from constants import SAVED_MODELS_DIRECTORY, CONFIGS_DIRECTORY
-from space_game.ai.RandomAI import RandomAI
+from space_game.ai.SBDQNController import SBDQNController
 from space_game.domain_names import Side
+from tournament_system.ModelEntry import ModelEntry, SBDQNEntry, CDQNEntry
 from tournament_system.TournamentRegister import TournamentRegister
 
 from models.DQN.self_play_training import train_model as sp_def
@@ -40,7 +42,7 @@ def train_dqn():
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "custom_dqn_config.yml")
 
     env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
-    single_train_model(env, dqn_config)
+    single_train_def_model(env, dqn_config)
 
 
 def space_game_with_c_dqn():
@@ -90,7 +92,7 @@ def dqn_train_scenario_1():
     env_config.use_simplified_environment_actions = True
     dqn_config = DQNConfig.custom(CONFIGS_DIRECTORY / "custom_dqn_config.yml")
     single_agent_env = SpaceGameEnvironment(environment_config=env_config, game_config=game_config)
-    model = single_train_model(single_agent_env, dqn_config)
+    model = single_train_def_model(single_agent_env, dqn_config)
     dqn_config.games_total = 100
     self_play_env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
     # self_play_train_model(env=self_play_env, dqn_config=dqn_config, old_model=model)
@@ -104,11 +106,20 @@ def train_sb3_dqn(game_config, env_config):
 
 
 def perform_tournament():
-    dqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+    dqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "C_DQN_0.8_128_15-13-02_23-01-2021/dqn.pt")
     cdqn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
     cnn = DQNWrapper.from_file(SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
 
-    tournament = TournamentRegister(1, 1, dqn, cdqn, cnn)
+    c1 = CDQNEntry(model_path=SAVED_MODELS_DIRECTORY / "C_DQN_0.8_128_15-13-02_23-01-2021/dqn.pt")
+    c2 = CDQNEntry(model_path=SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+    c3 = CDQNEntry(model_path=SAVED_MODELS_DIRECTORY / "CustomDQN_09-34-06_13-01-2021/dqn_down.pt")
+
+    tournament = TournamentRegister(1, 1)
+
+    tournament.add_model(c1)
+    tournament.add_model(c2)
+    tournament.add_model(c3)
+
     tournament.tournament()
     tournament.ranking()
 
@@ -118,7 +129,7 @@ def self_play_train_dqn():
     env_config = SpaceGameEnvironmentConfig.unified()
     dqn_config = DQNConfig.unified()
     env = SpaceGameSelfPlayEnvironment(environment_config=env_config, space_game_config=game_config)
-    gammas = [.999, .999999]
+    gammas = [.8, .9, .95]
     batch_sizes = [128, 256]
     for gamma in gammas:
         dqn_config.gamma = gamma
@@ -128,7 +139,18 @@ def self_play_train_dqn():
             sp_paper(env, dqn_config, custom_train_id=run_id)
 
 
-if __name__ == '__main__':
+def game_with_sbdqn():
     game_config = Config.unified()
-    env_config = SpaceGameEnvironmentConfig.unified()
-    train_sb3_dqn(game_config, env_config)
+    game = Game(game_config)
+    p1 = create_player_1(game_config, game.game_controller.event_manager)
+    p2, p2_controller = create_human_player_2(game_config, game.game_controller.event_manager)
+    sb_dqn_controller = SBDQNController(game.game_controller.event_manager, game_config,
+                                      p1, p2, Side.UP, game.game_controller.screen,
+                                      sb_dqn_path=SAVED_MODELS_DIRECTORY / "SB3_14-28-13_23-01-2021.zip")
+    game.add_player_1(PlayerTuple(p1, None, sb_dqn_controller))
+    game.add_player_2(PlayerTuple(p2, p2_controller, None))
+    game.start()
+
+
+if __name__ == '__main__':
+    perform_tournament()
