@@ -19,13 +19,14 @@ logger = logging.getLogger()
 
 
 class Game:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, max_game_length=10000):
         self.game_controller = GameController(config, renderable=True)
         self.config = config
         self.clock = pygame.time.Clock()
         self.running = True
         self.player_1_tuple = None
         self.player_2_tuple = None
+        self.max_game_length = max_game_length
 
     def add_player_1(self, player_1_tuple: PlayerTuple):
         self.player_1_tuple = player_1_tuple
@@ -95,6 +96,10 @@ class Game:
                 return Winner.PLAYER1
             if winner == Winner.PLAYER2:
                 return Winner.PLAYER2
+            if self.max_game_length <= 0:
+                return Winner.DRAW
+            else:
+                self.max_game_length -= 1
 
         pygame.display.update()
         pygame.time.wait(5000)

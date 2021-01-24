@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
+from common.utils import inverse_movement
 from space_game.Screen import Screen
 from space_game.ai.AIController import AIController
 from space_game.Config import Config
@@ -34,6 +35,7 @@ class CDQNController(AIController):
             choice = self.dqn_wrapper.predict(current_map)
         else:
             choice = self.dqn_wrapper.predict(np.flip(current_map, axis=1).copy())
+            choice = inverse_movement(choice)
 
         for event in AIActionToEventMapping[choice](id(self.player)):
             self.event_manager.add_event(event)

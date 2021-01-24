@@ -33,6 +33,7 @@ class SpaceGameEnvironment(gym.Env):
         self.renderable = environment_config.render
         self.game_controller = GameController(self.game_config, self.renderable)
         self.steps_left = SpaceGameEnvironmentConfig.max_steps
+        self.games = 0
 
         # AGENT INITIALIZATION
         self.agent = create_player_1(
@@ -58,10 +59,12 @@ class SpaceGameEnvironment(gym.Env):
         )
 
         self.history = []
-        self.action_space = gym.spaces.Discrete(len(AIActionToEventMapping))
+        self.action_space = gym.spaces.Discrete(len(self.EnvironmentAction))
         self.observation_space = gym.spaces.Box(high=255, low=0, shape=(64, 64, 1), dtype=uint8)
 
-    def reset(self, game_index=0):
+    def reset(self, game_index=None):
+        self.games += 1
+        game_index = game_index if game_index else self.games
         self.game_controller = GameController(self.game_config, self.renderable)
 
         self.steps_left = self.environment_config.max_steps

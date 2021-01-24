@@ -5,3 +5,4 @@ class Winner(Enum):
     PLAYER1 = auto()
     PLAYER2 = auto()
     NOBODY = auto()
+    DRAW = auto()
